@@ -1,0 +1,16 @@
+FROM golang:1.25-alpine
+
+# Install build tools
+RUN apk add --no-cache git
+
+WORKDIR /app
+
+# Install air untuk hot reload
+RUN go install github.com/air-verse/air@v1.61.7
+
+# Cache go module dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Source code di-mount via volume, tidak di-copy
+CMD ["air", "-c", ".air.toml"]

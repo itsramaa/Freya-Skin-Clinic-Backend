@@ -22,7 +22,7 @@ func NewStokKeluarHandler(svc service.StokKeluarService) *StokKeluarHandler {
 func (h *StokKeluarHandler) GetAll(c *fiber.Ctx) error {
 	data, err := h.svc.GetAll(c.Context())
 	if err != nil {
-		return response.Error(c, http.StatusInternalServerError, "Gagal mengambil data stok keluar", nil)
+		return response.Error(c, http.StatusInternalServerError, "Gagal mengambil data stok keluar. Silakan coba lagi.", nil)
 	}
 	return response.Success(c, http.StatusOK, "Data stok keluar berhasil diambil", data)
 }
@@ -30,31 +30,33 @@ func (h *StokKeluarHandler) GetAll(c *fiber.Ctx) error {
 func (h *StokKeluarHandler) GetPreviewBatch(c *fiber.Ctx) error {
 	idProduk := c.Query("produk_id")
 	if idProduk == "" {
-		return response.Error(c, http.StatusBadRequest, "produk_id diperlukan", nil)
+		return response.Error(c, http.StatusBadRequest, "Parameter produk_id wajib diisi.", nil)
 	}
 
 	data, err := h.svc.GetPreviewBatch(c.Context(), idProduk)
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrTidakAdaBatch):
-			return response.Error(c, http.StatusNotFound, err.Error(), nil)
+			return response.Error(c, http.StatusNotFound, "Tidak ada stok aktif untuk produk ini.", nil)
 		case errors.Is(err, service.ErrProdukKategoriNotFound):
-			return response.Error(c, http.StatusNotFound, "Produk tidak ditemukan", nil)
+			return response.Error(c, http.StatusNotFound, "Produk tidak ditemukan.", nil)
 		default:
-			return response.Error(c, http.StatusInternalServerError, "Gagal mengambil preview batch", nil)
+			return response.Error(c, http.StatusInternalServerError, "Gagal mengambil informasi batch. Silakan coba lagi.", nil)
 		}
 	}
-	return response.Success(c, http.StatusOK, "Preview batch berhasil diambil", data)
+	return response.Success(c, http.StatusOK, "Informasi batch berhasil diambil", data)
 }
 
 func (h *StokKeluarHandler) Create(c *fiber.Ctx) error {
 	var req model.StokKeluarRequest
 	if err := c.BodyParser(&req); err != nil {
-		return response.Error(c, http.StatusBadRequest, "Format request tidak valid", nil)
+		return response.Error(c, http.StatusBadRequest, "Format request tidak valid.", nil)
 	}
-
-	if req.IDProduk == "" || req.TanggalPenggunaan == "" {
-		return response.Error(c, http.StatusBadRequest, "Field wajib tidak lengkap", nil)
+	if req.IDProduk == "" {
+		return response.Error(c, http.StatusBadRequest, "Produk wajib dipilih.", nil)
+	}
+	if req.TanggalPenggunaan == "" {
+		return response.Error(c, http.StatusBadRequest, "Tanggal penggunaan wajib diisi.", nil)
 	}
 
 	userID, _ := c.Locals("user_id").(string)
@@ -63,16 +65,16 @@ func (h *StokKeluarHandler) Create(c *fiber.Ctx) error {
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrStokKurang):
-			return response.Error(c, http.StatusBadRequest, err.Error(), nil)
+			return response.Error(c, http.StatusBadRequest, "Stok tidak mencukupi untuk jumlah yang diminta.", nil)
 		case errors.Is(err, service.ErrTidakAdaBatch):
-			return response.Error(c, http.StatusBadRequest, err.Error(), nil)
+			return response.Error(c, http.StatusBadRequest, "Tidak ada stok aktif untuk produk ini.", nil)
 		case errors.Is(err, service.ErrIsiDipakaiMelebihiSisa):
-			return response.Error(c, http.StatusBadRequest, err.Error(), nil)
+			return response.Error(c, http.StatusBadRequest, "Jumlah isi yang dipakai melebihi sisa isi kemasan terbuka.", nil)
 		case errors.Is(err, service.ErrProdukKategoriNotFound):
-			return response.Error(c, http.StatusNotFound, "Produk tidak ditemukan", nil)
+			return response.Error(c, http.StatusNotFound, "Produk tidak ditemukan.", nil)
 		default:
-			return response.Error(c, http.StatusInternalServerError, "Gagal menyimpan stok keluar", nil)
+			return response.Error(c, http.StatusInternalServerError, "Gagal menyimpan data penggunaan stok. Silakan coba lagi.", nil)
 		}
 	}
-	return response.Success(c, http.StatusCreated, "Data penggunaan berhasil disimpan.", data)
+	return response.Success(c, http.StatusCreated, "Data penggunaan stok berhasil disimpan.", data)
 }

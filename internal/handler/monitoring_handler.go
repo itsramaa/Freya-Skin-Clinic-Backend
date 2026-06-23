@@ -28,7 +28,7 @@ func (h *MonitoringHandler) GetAll(c *fiber.Ctx) error {
 
 	data, err := h.svc.GetAll(c.Context(), filter)
 	if err != nil {
-		return response.Error(c, http.StatusInternalServerError, "Gagal mengambil data monitoring", nil)
+		return response.Error(c, http.StatusInternalServerError, "Gagal mengambil data monitoring stok. Silakan coba lagi.", nil)
 	}
 	return response.Success(c, http.StatusOK, "Data monitoring berhasil diambil", data)
 }

@@ -22,7 +22,7 @@ func NewStokMasukHandler(svc service.StokMasukService) *StokMasukHandler {
 func (h *StokMasukHandler) GetAll(c *fiber.Ctx) error {
 	data, err := h.svc.GetAll(c.Context())
 	if err != nil {
-		return response.Error(c, http.StatusInternalServerError, "Gagal mengambil data stok masuk", nil)
+		return response.Error(c, http.StatusInternalServerError, "Gagal mengambil data stok masuk. Silakan coba lagi.", nil)
 	}
 	return response.Success(c, http.StatusOK, "Data stok masuk berhasil diambil", data)
 }
@@ -30,11 +30,19 @@ func (h *StokMasukHandler) GetAll(c *fiber.Ctx) error {
 func (h *StokMasukHandler) Create(c *fiber.Ctx) error {
 	var req model.StokMasukRequest
 	if err := c.BodyParser(&req); err != nil {
-		return response.Error(c, http.StatusBadRequest, "Format request tidak valid", nil)
+		return response.Error(c, http.StatusBadRequest, "Format request tidak valid.", nil)
 	}
-
-	if req.IDProduk == "" || req.TanggalPenerimaan == "" || req.ExpiredDate == "" || req.JumlahKemasan <= 0 {
-		return response.Error(c, http.StatusBadRequest, "Field wajib tidak lengkap", nil)
+	if req.IDProduk == "" {
+		return response.Error(c, http.StatusBadRequest, "Produk wajib dipilih.", nil)
+	}
+	if req.TanggalPenerimaan == "" {
+		return response.Error(c, http.StatusBadRequest, "Tanggal penerimaan wajib diisi.", nil)
+	}
+	if req.ExpiredDate == "" {
+		return response.Error(c, http.StatusBadRequest, "Tanggal kedaluwarsa wajib diisi.", nil)
+	}
+	if req.JumlahKemasan <= 0 {
+		return response.Error(c, http.StatusBadRequest, "Jumlah kemasan harus lebih dari 0.", nil)
 	}
 
 	userID, _ := c.Locals("user_id").(string)
@@ -43,13 +51,13 @@ func (h *StokMasukHandler) Create(c *fiber.Ctx) error {
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrStokMasukExpiredTooEarly):
-			return response.Error(c, http.StatusBadRequest, err.Error(), nil)
+			return response.Error(c, http.StatusBadRequest, "Tanggal kedaluwarsa harus setelah tanggal penerimaan.", nil)
 		case errors.Is(err, service.ErrStokMasukTanggalFuture):
-			return response.Error(c, http.StatusBadRequest, err.Error(), nil)
+			return response.Error(c, http.StatusBadRequest, "Tanggal penerimaan tidak boleh melebihi tanggal hari ini.", nil)
 		case errors.Is(err, service.ErrProdukKategoriNotFound):
-			return response.Error(c, http.StatusNotFound, "Produk tidak ditemukan", nil)
+			return response.Error(c, http.StatusNotFound, "Produk tidak ditemukan.", nil)
 		default:
-			return response.Error(c, http.StatusInternalServerError, "Gagal menyimpan stok masuk", nil)
+			return response.Error(c, http.StatusInternalServerError, "Gagal menyimpan data stok masuk. Silakan coba lagi.", nil)
 		}
 	}
 	return response.Success(c, http.StatusCreated, "Data stok masuk berhasil disimpan.", data)

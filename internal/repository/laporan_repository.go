@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -38,12 +39,12 @@ func (r *laporanRepository) GetStokMasuk(ctx context.Context, filter model.Lapor
 	idx := 3
 
 	if filter.KategoriID != "" {
-		query += ` AND p.id_kategori = $` + itoa(idx)
+		query += ` AND p.id_kategori = $` + strconv.Itoa(idx)
 		args = append(args, filter.KategoriID)
 		idx++
 	}
 	if filter.ProdukID != "" {
-		query += ` AND p.id = $` + itoa(idx)
+		query += ` AND p.id = $` + strconv.Itoa(idx)
 		args = append(args, filter.ProdukID)
 	}
 	query += ` ORDER BY sm.tanggal_penerimaan DESC`
@@ -87,12 +88,12 @@ func (r *laporanRepository) GetStokKeluar(ctx context.Context, filter model.Lapo
 	idx := 3
 
 	if filter.KategoriID != "" {
-		query += ` AND p.id_kategori = $` + itoa(idx)
+		query += ` AND p.id_kategori = $` + strconv.Itoa(idx)
 		args = append(args, filter.KategoriID)
 		idx++
 	}
 	if filter.ProdukID != "" {
-		query += ` AND p.id = $` + itoa(idx)
+		query += ` AND p.id = $` + strconv.Itoa(idx)
 		args = append(args, filter.ProdukID)
 	}
 	query += ` ORDER BY sk.tanggal_penggunaan DESC`
@@ -134,12 +135,12 @@ func (r *laporanRepository) GetSisaStok(ctx context.Context, filter model.Lapora
 	idx := 1
 
 	if filter.KategoriID != "" {
-		query += ` AND p.id_kategori = $` + itoa(idx)
+		query += ` AND p.id_kategori = $` + strconv.Itoa(idx)
 		args = append(args, filter.KategoriID)
 		idx++
 	}
 	if filter.ProdukID != "" {
-		query += ` AND p.id = $` + itoa(idx)
+		query += ` AND p.id = $` + strconv.Itoa(idx)
 		args = append(args, filter.ProdukID)
 	}
 	query += ` GROUP BY p.id, k.nama_kategori ORDER BY p.kode_produk`

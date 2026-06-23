@@ -37,8 +37,8 @@ func (r *produkRepository) FindAll(ctx context.Context) ([]model.ProdukResponse,
 	query := `
 		SELECT p.id, p.kode_produk, p.nama_produk, p.id_kategori, k.nama_kategori,
 		       p.bentuk_kemasan, p.satuan_isi, p.isi_per_kemasan, p.pola_penggunaan,
-		       COALESCE(SUM(b.jumlah_kemasan) FILTER (WHERE b.status = 'AKTIF'), 0)::int AS stok_kemasan,
-		       COALESCE(SUM(b.sisa_isi) FILTER (WHERE b.status = 'AKTIF'), 0)::float8 AS total_isi_tersedia,
+		       COALESCE(SUM(b.stok_kemasan) FILTER (WHERE b.status = 'AKTIF'), 0)::int AS stok_kemasan,
+		       COALESCE(SUM(b.total_isi_tersedia) FILTER (WHERE b.status = 'AKTIF'), 0)::float8 AS total_isi_tersedia,
 		       EXISTS(SELECT 1 FROM stok_masuk sm WHERE sm.id_produk = p.id) AS has_transaksi
 		FROM produk p
 		JOIN kategori k ON k.id = p.id_kategori

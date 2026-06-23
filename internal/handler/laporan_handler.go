@@ -21,7 +21,7 @@ func (h *LaporanHandler) GetStokMasuk(c *fiber.Ctx) error {
 	dari := c.Query("dari")
 	sampai := c.Query("sampai")
 	if dari == "" || sampai == "" {
-		return response.Error(c, http.StatusBadRequest, "Parameter 'dari' dan 'sampai' wajib diisi", nil)
+		return response.Error(c, http.StatusBadRequest, "Parameter 'dari' dan 'sampai' wajib diisi dengan format YYYY-MM-DD.", nil)
 	}
 	data, err := h.svc.GetStokMasuk(c.Context(), dari, sampai, c.Query("kategori_id"), c.Query("produk_id"))
 	if err != nil {
@@ -34,7 +34,7 @@ func (h *LaporanHandler) GetStokKeluar(c *fiber.Ctx) error {
 	dari := c.Query("dari")
 	sampai := c.Query("sampai")
 	if dari == "" || sampai == "" {
-		return response.Error(c, http.StatusBadRequest, "Parameter 'dari' dan 'sampai' wajib diisi", nil)
+		return response.Error(c, http.StatusBadRequest, "Parameter 'dari' dan 'sampai' wajib diisi dengan format YYYY-MM-DD.", nil)
 	}
 	data, err := h.svc.GetStokKeluar(c.Context(), dari, sampai, c.Query("kategori_id"), c.Query("produk_id"))
 	if err != nil {
@@ -46,7 +46,7 @@ func (h *LaporanHandler) GetStokKeluar(c *fiber.Ctx) error {
 func (h *LaporanHandler) GetSisaStok(c *fiber.Ctx) error {
 	data, err := h.svc.GetSisaStok(c.Context(), c.Query("kategori_id"), c.Query("produk_id"))
 	if err != nil {
-		return response.Error(c, http.StatusInternalServerError, "Gagal mengambil laporan sisa stok", nil)
+		return response.Error(c, http.StatusInternalServerError, "Gagal mengambil laporan sisa stok. Silakan coba lagi.", nil)
 	}
 	return response.Success(c, http.StatusOK, "Laporan sisa stok berhasil diambil", data)
 }

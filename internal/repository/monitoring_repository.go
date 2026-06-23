@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"time"
 
@@ -66,7 +67,7 @@ func (r *monitoringRepository) FindAllForMonitoring(ctx context.Context, filter 
 
 	for rows.Next() {
 		var (
-			bID, bIDProduk, bKodeBatch, bStatus string
+			bID, bIDProduk, bKodeBatch, bStatus   string
 			bExpiredDate                          time.Time
 			bStokKemasan                          int
 			bTotalIsi                             float64
@@ -165,5 +166,5 @@ func (r *monitoringRepository) FindAllForMonitoring(ctx context.Context, filter 
 }
 
 func itoa(n int) string {
-	return strings.TrimSpace(strings.Join([]string{""[0:0], string(rune('0' + n))}, ""))
+	return strconv.Itoa(n)
 }

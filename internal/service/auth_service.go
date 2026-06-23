@@ -17,7 +17,7 @@ var ErrInvalidCredentials = errors.New("Kredensial tidak valid")
 
 type AuthService interface {
 	Login(ctx context.Context, username, password string) (*model.LoginResponse, error)
-	ChangePassword(ctx context.Context, userID, newPassword string) error
+	ChangePassword(ctx context.Context, userID, username, newPassword string) (*model.LoginResponse, error)
 }
 
 type authService struct {
@@ -60,10 +60,33 @@ func (s *authService) Login(ctx context.Context, username, password string) (*mo
 	}, nil
 }
 
-func (s *authService) ChangePassword(ctx context.Context, userID, newPassword string) error {
+func (s *authService) ChangePassword(ctx context.Context, userID, username, newPassword string) (*model.LoginResponse, error) {
 	passwordHash, err := hash.HashPassword(newPassword)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return s.userRepo.UpdatePassword(ctx, userID, passwordHash)
+	if err := s.userRepo.UpdatePassword(ctx, userID, passwordHash); err != nil {
+		return nil, err
+	}
+
+	// Generate session_id baru setelah ganti password
+	sessionID := uuid.New().String()
+	if err := s.userRepo.UpdateSessionID(ctx, userID, sessionID); err != nil {
+		return nil, err
+	}
+
+	// Return token baru agar frontend tidak perlu re-login
+	token, err := jwt.GenerateToken(userID, username, sessionID, s.cfg.JWTSecret, s.cfg.JWTExpiryHours)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.LoginResponse{
+		Token: token,
+		User: model.UserPayload{
+			ID:       userID,
+			Username: username,
+		},
+		IsDefaultPassword: false,
+	}, nil
 }

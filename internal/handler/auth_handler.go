@@ -50,14 +50,16 @@ func (h *AuthHandler) ChangePassword(c *fiber.Ctx) error {
 		return response.Error(c, http.StatusBadRequest, "Password minimal 8 karakter", nil)
 	}
 
-	userID, ok := c.Locals("user_id").(string)
-	if !ok || userID == "" {
+	userID, _ := c.Locals("user_id").(string)
+	username, _ := c.Locals("username").(string)
+	if userID == "" {
 		return response.Error(c, http.StatusUnauthorized, "Unauthorized", nil)
 	}
 
-	if err := h.authService.ChangePassword(c.Context(), userID, req.PasswordBaru); err != nil {
+	loginResp, err := h.authService.ChangePassword(c.Context(), userID, username, req.PasswordBaru)
+	if err != nil {
 		return response.Error(c, http.StatusInternalServerError, "Gagal mengubah password", nil)
 	}
 
-	return response.Success(c, http.StatusOK, "Password berhasil diperbarui", nil)
+	return response.Success(c, http.StatusOK, "Password berhasil diperbarui", loginResp)
 }

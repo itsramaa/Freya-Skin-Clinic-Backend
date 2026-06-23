@@ -35,16 +35,18 @@ type SelesaikanOpnameRequest struct {
 }
 
 type OpnameItemResponse struct {
-	IDBatch          string   `json:"id_batch"`
-	KodeBatch        string   `json:"kode_batch"`
-	NamaProduk       string   `json:"nama_produk"`
-	ExpiredDate      string   `json:"expired_date"`
-	IDKemasanTerbuka *string  `json:"id_kemasan_terbuka"`
-	IsiTersisa       *float64 `json:"isi_tersisa"`
-	StokSistem       float64  `json:"stok_sistem"`
-	StokFisik        *float64 `json:"stok_fisik"`
-	Selisih          *float64 `json:"selisih"`
-	Keterangan       string   `json:"keterangan"`
+	IDBatch            string   `json:"id_batch"`
+	KodeBatch          string   `json:"kode_batch"`
+	NamaProduk         string   `json:"nama_produk"`
+	ExpiredDate        string   `json:"expired_date"`
+	PolaPenggunaan     string   `json:"pola_penggunaan"`
+	SatuanIsi          string   `json:"satuan_isi"`
+	IDKemasanTerbuka   *string  `json:"id_kemasan_terbuka"`
+	IsiTersisa         *float64 `json:"isi_tersisa"`
+	StokSistem         float64  `json:"stok_sistem"`
+	StokFisik          *float64 `json:"stok_fisik"`
+	Selisih            *float64 `json:"selisih"`
+	Keterangan         string   `json:"keterangan"`
 }
 
 type StokOpnameResponse struct {

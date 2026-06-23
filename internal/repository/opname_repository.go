@@ -77,9 +77,9 @@ func (r *opnameRepository) UpdateStatus(ctx context.Context, id, status string) 
 }
 
 func (r *opnameRepository) GetItemsForOpname(ctx context.Context) ([]model.OpnameItemResponse, error) {
-	// Ambil semua batch AKTIF + kemasan terbuka AKTIF
 	query := `
 		SELECT b.id, b.kode_batch, p.nama_produk, b.expired_date,
+		       p.pola_penggunaan, p.satuan_isi,
 		       NULL::UUID AS id_kemasan_terbuka, NULL::DECIMAL AS isi_tersisa,
 		       b.stok_kemasan::DECIMAL AS stok_sistem
 		FROM batch_stok b
@@ -89,12 +89,13 @@ func (r *opnameRepository) GetItemsForOpname(ctx context.Context) ([]model.Opnam
 		UNION ALL
 
 		SELECT b.id, b.kode_batch, p.nama_produk, b.expired_date,
+		       p.pola_penggunaan, p.satuan_isi,
 		       kt.id, kt.isi_tersisa,
 		       kt.isi_tersisa AS stok_sistem
 		FROM kemasan_terbuka kt
 		JOIN batch_stok b ON b.id = kt.id_batch
 		JOIN produk p ON p.id = b.id_produk
-		WHERE kt.status_bud = 'AKTIF'
+		WHERE kt.status_bud = 'AKTIF' AND kt.isi_tersisa > 0
 
 		ORDER BY nama_produk, expired_date
 	`
@@ -110,6 +111,7 @@ func (r *opnameRepository) GetItemsForOpname(ctx context.Context) ([]model.Opnam
 		var exp time.Time
 		if err := rows.Scan(
 			&item.IDBatch, &item.KodeBatch, &item.NamaProduk, &exp,
+			&item.PolaPenggunaan, &item.SatuanIsi,
 			&item.IDKemasanTerbuka, &item.IsiTersisa, &item.StokSistem,
 		); err != nil {
 			return nil, err

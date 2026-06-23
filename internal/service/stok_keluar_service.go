@@ -75,6 +75,8 @@ func (s *stokKeluarService) GetPreviewBatch(ctx context.Context, idProduk string
 		StokKemasan:      batch.StokKemasan,
 		TotalIsiTersedia: batch.TotalIsiTersedia,
 		PolaPenggunaan:   produk.PolaPenggunaan,
+		SatuanIsi:        produk.SatuanIsi,
+		IsiPerKemasan:    produk.IsiPerKemasan,
 	}
 
 	if produk.PolaPenggunaan == "PARTIAL_USE" {

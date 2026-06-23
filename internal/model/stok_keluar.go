@@ -49,12 +49,14 @@ type StokKeluarResponse struct {
 }
 
 type PreviewBatchResponse struct {
-	IDBatch          string   `json:"id_batch"`
-	KodeBatch        string   `json:"kode_batch"`
-	ExpiredDate      string   `json:"expired_date"`
-	StokKemasan      int      `json:"stok_kemasan"`
-	TotalIsiTersedia float64  `json:"total_isi_tersedia"`
-	PolaPenggunaan   string   `json:"pola_penggunaan"`
+	IDBatch          string              `json:"id_batch"`
+	KodeBatch        string              `json:"kode_batch"`
+	ExpiredDate      string              `json:"expired_date"`
+	StokKemasan      int                 `json:"stok_kemasan"`
+	TotalIsiTersedia float64             `json:"total_isi_tersedia"`
+	PolaPenggunaan   string              `json:"pola_penggunaan"`
+	SatuanIsi        string              `json:"satuan_isi"`
+	IsiPerKemasan    *float64            `json:"isi_per_kemasan"`
 	KemasanTerbuka   *KemasanTerbukaInfo `json:"kemasan_terbuka"`
 }
 

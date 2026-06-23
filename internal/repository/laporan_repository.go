@@ -27,6 +27,7 @@ func NewLaporanRepository(db *pgxpool.Pool) LaporanRepository {
 func (r *laporanRepository) GetStokMasuk(ctx context.Context, filter model.LaporanFilter) ([]model.LaporanStokMasukItem, error) {
 	query := `
 		SELECT sm.id, sm.tanggal_penerimaan, p.nama_produk, p.kode_produk, k.nama_kategori,
+		       p.pola_penggunaan, p.satuan_isi,
 		       b.kode_batch, b.expired_date, sm.jumlah_kemasan, sm.total_isi_masuk,
 		       COALESCE(sm.keterangan,'')
 		FROM stok_masuk sm
@@ -60,6 +61,7 @@ func (r *laporanRepository) GetStokMasuk(ctx context.Context, filter model.Lapor
 		var item model.LaporanStokMasukItem
 		var tgl, exp time.Time
 		if err := rows.Scan(&item.ID, &tgl, &item.NamaProduk, &item.KodeProduk, &item.NamaKategori,
+			&item.PolaPenggunaan, &item.SatuanIsi,
 			&item.KodeBatch, &exp, &item.JumlahKemasan, &item.TotalIsiMasuk, &item.Keterangan); err != nil {
 			return nil, err
 		}

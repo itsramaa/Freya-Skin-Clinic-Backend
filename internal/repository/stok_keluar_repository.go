@@ -122,7 +122,7 @@ func (r *stokKeluarRepository) Create(ctx context.Context, sk *model.StokKeluar)
 
 func (r *stokKeluarRepository) FindAll(ctx context.Context) ([]model.StokKeluarResponse, error) {
 	query := `
-		SELECT sk.id, sk.id_produk, p.nama_produk, b.kode_batch, p.pola_penggunaan,
+		SELECT sk.id, sk.id_produk, p.nama_produk, b.kode_batch, p.pola_penggunaan, p.satuan_isi,
 		       sk.tanggal_penggunaan, sk.jumlah_kemasan_dipakai, sk.jumlah_isi_dipakai,
 		       COALESCE(sk.keterangan,''), sk.created_at
 		FROM stok_keluar sk
@@ -140,7 +140,7 @@ func (r *stokKeluarRepository) FindAll(ctx context.Context) ([]model.StokKeluarR
 		var s model.StokKeluarResponse
 		var tgl, created time.Time
 		if err := rows.Scan(
-			&s.ID, &s.IDProduk, &s.NamaProduk, &s.KodeBatch, &s.PolaPenggunaan,
+			&s.ID, &s.IDProduk, &s.NamaProduk, &s.KodeBatch, &s.PolaPenggunaan, &s.SatuanIsi,
 			&tgl, &s.JumlahKemasanDipakai, &s.JumlahIsiDipakai, &s.Keterangan, &created,
 		); err != nil {
 			return nil, err

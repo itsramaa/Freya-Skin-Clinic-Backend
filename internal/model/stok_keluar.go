@@ -28,11 +28,11 @@ type StokKeluar struct {
 }
 
 type StokKeluarRequest struct {
-	IDProduk          string  `json:"id_produk" validate:"required"`
-	TanggalPenggunaan string  `json:"tanggal_penggunaan" validate:"required"`
-	JumlahKemasanDipakai int  `json:"jumlah_kemasan_dipakai"`
-	JumlahIsiDipakai  float64 `json:"jumlah_isi_dipakai"`
-	Keterangan        string  `json:"keterangan"`
+	IDProduk             string  `json:"id_produk" validate:"required"`
+	TanggalPenggunaan    string  `json:"tanggal_penggunaan" validate:"required"`
+	JumlahKemasanDipakai int     `json:"jumlah_kemasan_dipakai"`
+	JumlahIsiDipakai     float64 `json:"jumlah_isi_dipakai"`
+	Keterangan           string  `json:"keterangan"`
 }
 
 type StokKeluarResponse struct {
@@ -41,6 +41,7 @@ type StokKeluarResponse struct {
 	NamaProduk           string  `json:"nama_produk"`
 	KodeBatch            string  `json:"kode_batch"`
 	PolaPenggunaan       string  `json:"pola_penggunaan"`
+	SatuanIsi            string  `json:"satuan_isi"`
 	TanggalPenggunaan    string  `json:"tanggal_penggunaan"`
 	JumlahKemasanDipakai int     `json:"jumlah_kemasan_dipakai"`
 	JumlahIsiDipakai     float64 `json:"jumlah_isi_dipakai"`

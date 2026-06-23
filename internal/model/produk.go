@@ -3,14 +3,15 @@ package model
 import "time"
 
 type Produk struct {
-	ID             string   `db:"id"`
-	KodeProduk     string   `db:"kode_produk"`
-	NamaProduk     string   `db:"nama_produk"`
-	IDKategori     string   `db:"id_kategori"`
-	BentukKemasan  string   `db:"bentuk_kemasan"`
-	SatuanIsi      string   `db:"satuan_isi"`
-	IsiPerKemasan  *float64 `db:"isi_per_kemasan"`
-	PolaPenggunaan string   `db:"pola_penggunaan"`
+	ID             string    `db:"id"`
+	KodeProduk     string    `db:"kode_produk"`
+	NamaProduk     string    `db:"nama_produk"`
+	IDKategori     string    `db:"id_kategori"`
+	NamaKategori   string    `db:"nama_kategori"`
+	BentukKemasan  string    `db:"bentuk_kemasan"`
+	SatuanIsi      string    `db:"satuan_isi"`
+	IsiPerKemasan  *float64  `db:"isi_per_kemasan"`
+	PolaPenggunaan string    `db:"pola_penggunaan"`
 	CreatedAt      time.Time `db:"created_at"`
 	UpdatedAt      time.Time `db:"updated_at"`
 }

@@ -22,11 +22,11 @@ type StokKeluarService interface {
 }
 
 type stokKeluarService struct {
-	stokKeluarRepo   repository.StokKeluarRepository
-	batchRepo        repository.BatchRepository
-	batchFEFORepo    repository.BatchFEFORepository
-	kemasanRepo      repository.KemasanTerbukaRepository
-	produkRepo       repository.ProdukRepository
+	stokKeluarRepo repository.StokKeluarRepository
+	batchRepo      repository.BatchRepository
+	batchFEFORepo  repository.BatchFEFORepository
+	kemasanRepo    repository.KemasanTerbukaRepository
+	produkRepo     repository.ProdukRepository
 }
 
 func NewStokKeluarService(
@@ -55,7 +55,12 @@ func (s *stokKeluarService) GetPreviewBatch(ctx context.Context, idProduk string
 		return nil, ErrProdukKategoriNotFound
 	}
 
-	batch, err := s.batchFEFORepo.FindBatchPrioritasFEFO(ctx, idProduk)
+	var batch *model.BatchStok
+	if produk.PolaPenggunaan == "PARTIAL_USE" {
+		batch, err = s.batchFEFORepo.FindBatchPartialUseFEFO(ctx, idProduk)
+	} else {
+		batch, err = s.batchFEFORepo.FindBatchPrioritasFEFO(ctx, idProduk)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +98,7 @@ func (s *stokKeluarService) GetPreviewBatch(ctx context.Context, idProduk string
 func (s *stokKeluarService) Create(ctx context.Context, req model.StokKeluarRequest, userID string) (*model.StokKeluarResponse, error) {
 	tglPenggunaan, err := time.Parse("2006-01-02", req.TanggalPenggunaan)
 	if err != nil {
-		return nil, errors.New("Format tanggal tidak valid")
+		return nil, errors.New("Format tanggal tidak valid (YYYY-MM-DD)")
 	}
 
 	produk, err := s.produkRepo.FindByID(ctx, req.IDProduk)
@@ -101,8 +106,65 @@ func (s *stokKeluarService) Create(ctx context.Context, req model.StokKeluarRequ
 		return nil, ErrProdukKategoriNotFound
 	}
 
-	// FEFO: ambil batch prioritas
-	batch, err := s.batchFEFORepo.FindBatchPrioritasFEFO(ctx, req.IDProduk)
+	sk := &model.StokKeluar{
+		IDProduk:          req.IDProduk,
+		IDUser:            userID,
+		TanggalPenggunaan: tglPenggunaan,
+		Keterangan:        req.Keterangan,
+	}
+
+	if produk.PolaPenggunaan == "FULL_USE" {
+		if req.JumlahKemasanDipakai <= 0 {
+			return nil, errors.New("Jumlah kemasan dipakai harus lebih dari 0.")
+		}
+
+		batch, err := s.batchFEFORepo.FindBatchPrioritasFEFO(ctx, req.IDProduk)
+		if err != nil {
+			return nil, err
+		}
+		if batch == nil {
+			return nil, ErrTidakAdaBatch
+		}
+		if batch.StokKemasan < req.JumlahKemasanDipakai {
+			return nil, ErrStokKurang
+		}
+
+		// Full Use: total isi = jumlah kemasan (tidak dikali isi_per_kemasan)
+		totalIsi := float64(req.JumlahKemasanDipakai)
+
+		if err := s.batchFEFORepo.ReduceStok(ctx, batch.ID, req.JumlahKemasanDipakai, totalIsi); err != nil {
+			return nil, err
+		}
+
+		sk.IDBatch = batch.ID
+		sk.JumlahKemasanDipakai = req.JumlahKemasanDipakai
+		sk.JumlahIsiDipakai = totalIsi
+
+		if err := s.stokKeluarRepo.Create(ctx, sk); err != nil {
+			return nil, err
+		}
+
+		return &model.StokKeluarResponse{
+			ID:                   sk.ID,
+			IDProduk:             req.IDProduk,
+			NamaProduk:           produk.NamaProduk,
+			KodeBatch:            batch.KodeBatch,
+			PolaPenggunaan:       produk.PolaPenggunaan,
+			TanggalPenggunaan:    tglPenggunaan.Format("2006-01-02"),
+			JumlahKemasanDipakai: sk.JumlahKemasanDipakai,
+			JumlahIsiDipakai:     sk.JumlahIsiDipakai,
+			Keterangan:           req.Keterangan,
+			CreatedAt:            sk.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		}, nil
+	}
+
+	// ── PARTIAL USE ──
+	if req.JumlahIsiDipakai <= 0 {
+		return nil, errors.New("Jumlah isi dipakai harus lebih dari 0.")
+	}
+
+	// FEFO Partial: prioritaskan batch dengan kemasan terbuka aktif dulu
+	batch, err := s.batchFEFORepo.FindBatchPartialUseFEFO(ctx, req.IDProduk)
 	if err != nil {
 		return nil, err
 	}
@@ -110,121 +172,103 @@ func (s *stokKeluarService) Create(ctx context.Context, req model.StokKeluarRequ
 		return nil, ErrTidakAdaBatch
 	}
 
-	sk := &model.StokKeluar{
-		IDProduk:          req.IDProduk,
-		IDBatch:           batch.ID,
-		IDUser:            userID,
-		TanggalPenggunaan: tglPenggunaan,
-		Keterangan:        req.Keterangan,
+	kt, err := s.kemasanRepo.FindAktifByBatch(ctx, batch.ID)
+	if err != nil {
+		return nil, err
 	}
 
-	if produk.PolaPenggunaan == "FULL_USE" {
-		// Full Use: kurangi stok kemasan
-		if req.JumlahKemasanDipakai <= 0 {
-			return nil, errors.New("Jumlah kemasan dipakai harus > 0")
+	// BUD expired → nonaktifkan, cari batch baru
+	if kt != nil && kt.BUD.Before(tglPenggunaan) {
+		if err := s.kemasanRepo.UpdateStatus(ctx, kt.ID, "KADALUWARSA"); err != nil {
+			return nil, err
 		}
-		if batch.StokKemasan < req.JumlahKemasanDipakai {
+		kt = nil
+		// Cari ulang batch yang punya stok kemasan
+		batch, err = s.batchFEFORepo.FindBatchPrioritasFEFO(ctx, req.IDProduk)
+		if err != nil {
+			return nil, err
+		}
+		if batch == nil {
+			return nil, ErrTidakAdaBatch
+		}
+	}
+
+	var idKemasan *string
+
+	if kt != nil && kt.IsiTersisa > 0 {
+		// Pakai kemasan terbuka yang masih ada isinya
+		if req.JumlahIsiDipakai > kt.IsiTersisa {
+			return nil, ErrIsiDipakaiMelebihiSisa
+		}
+		newSisa := kt.IsiTersisa - req.JumlahIsiDipakai
+
+		// Update isi tersisa kemasan terbuka
+		if err := s.kemasanRepo.UpdateIsiTersisa(ctx, kt.ID, newSisa); err != nil {
+			return nil, err
+		}
+		// Update total_isi_tersedia batch
+		if err := s.batchFEFORepo.ReduceStok(ctx, batch.ID, 0, req.JumlahIsiDipakai); err != nil {
+			return nil, err
+		}
+		idKemasan = &kt.ID
+
+		// Jika kemasan terbuka habis, tandai KADALUWARSA (habis terpakai)
+		if newSisa == 0 {
+			_ = s.kemasanRepo.UpdateStatus(ctx, kt.ID, "KADALUWARSA")
+		}
+	} else {
+		// Tidak ada kemasan terbuka atau habis → buka kemasan baru
+		if batch.StokKemasan < 1 {
 			return nil, ErrStokKurang
 		}
-
 		isiPerKemasan := 1.0
 		if produk.IsiPerKemasan != nil {
 			isiPerKemasan = *produk.IsiPerKemasan
 		}
-		totalIsi := float64(req.JumlahKemasanDipakai) * isiPerKemasan
+		if req.JumlahIsiDipakai > isiPerKemasan {
+			return nil, ErrIsiDipakaiMelebihiSisa
+		}
 
-		if err := s.batchFEFORepo.ReduceStok(ctx, batch.ID, req.JumlahKemasanDipakai, totalIsi); err != nil {
+		newKT := &model.KemasanTerbuka{
+			IDBatch:       batch.ID,
+			TanggalDibuka: tglPenggunaan,
+			BUD:           tglPenggunaan.AddDate(0, 0, 28),
+			IsiAwal:       isiPerKemasan,
+			IsiTersisa:    isiPerKemasan - req.JumlahIsiDipakai,
+			StatusBUD:     "AKTIF",
+		}
+		if err := s.kemasanRepo.Create(ctx, newKT); err != nil {
+			return nil, err
+		}
+		idKemasan = &newKT.ID
+
+		if err := s.batchFEFORepo.ReduceStok(ctx, batch.ID, 1, req.JumlahIsiDipakai); err != nil {
 			return nil, err
 		}
 
-		sk.JumlahKemasanDipakai = req.JumlahKemasanDipakai
-		sk.JumlahIsiDipakai = totalIsi
-
-	} else {
-		// Partial Use
-		if req.JumlahIsiDipakai <= 0 {
-			return nil, errors.New("Jumlah isi dipakai harus > 0")
+		// Jika kemasan langsung habis dalam satu pakai
+		if newKT.IsiTersisa == 0 {
+			_ = s.kemasanRepo.UpdateStatus(ctx, newKT.ID, "KADALUWARSA")
 		}
-
-		kt, err := s.kemasanRepo.FindAktifByBatch(ctx, batch.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		if kt != nil && kt.BUD.Before(tglPenggunaan) {
-			// BUD expired — nonaktifkan dan buka kemasan baru
-			if err := s.kemasanRepo.UpdateStatus(ctx, kt.ID, "KADALUWARSA"); err != nil {
-				return nil, err
-			}
-			kt = nil
-		}
-
-		var idKemasan *string
-
-		if kt == nil {
-			// Buka kemasan baru
-			if batch.StokKemasan < 1 {
-				return nil, ErrStokKurang
-			}
-			isiPerKemasan := 1.0
-			if produk.IsiPerKemasan != nil {
-				isiPerKemasan = *produk.IsiPerKemasan
-			}
-			if req.JumlahIsiDipakai > isiPerKemasan {
-				return nil, ErrIsiDipakaiMelebihiSisa
-			}
-
-			newKT := &model.KemasanTerbuka{
-				IDBatch:       batch.ID,
-				TanggalDibuka: tglPenggunaan,
-				BUD:           tglPenggunaan.AddDate(0, 0, 28),
-				IsiAwal:       isiPerKemasan,
-				IsiTersisa:    isiPerKemasan - req.JumlahIsiDipakai,
-				StatusBUD:     "AKTIF",
-			}
-			if err := s.kemasanRepo.Create(ctx, newKT); err != nil {
-				return nil, err
-			}
-			idKemasan = &newKT.ID
-
-			// Kurangi 1 kemasan dari batch
-			if err := s.batchFEFORepo.ReduceStok(ctx, batch.ID, 1, req.JumlahIsiDipakai); err != nil {
-				return nil, err
-			}
-		} else {
-			// Pakai kemasan terbuka yang ada
-			if req.JumlahIsiDipakai > kt.IsiTersisa {
-				return nil, ErrIsiDipakaiMelebihiSisa
-			}
-			newSisa := kt.IsiTersisa - req.JumlahIsiDipakai
-			if err := s.kemasanRepo.UpdateIsiTersisa(ctx, kt.ID, newSisa); err != nil {
-				return nil, err
-			}
-			idKemasan = &kt.ID
-
-			if err := s.batchFEFORepo.ReduceStok(ctx, batch.ID, 0, req.JumlahIsiDipakai); err != nil {
-				return nil, err
-			}
-		}
-
-		sk.IDKemasanTerbuka = idKemasan
-		sk.JumlahIsiDipakai = req.JumlahIsiDipakai
 	}
+
+	sk.IDBatch = batch.ID
+	sk.IDKemasanTerbuka = idKemasan
+	sk.JumlahIsiDipakai = req.JumlahIsiDipakai
 
 	if err := s.stokKeluarRepo.Create(ctx, sk); err != nil {
 		return nil, err
 	}
 
 	return &model.StokKeluarResponse{
-		ID:                   sk.ID,
-		IDProduk:             req.IDProduk,
-		NamaProduk:           produk.NamaProduk,
-		KodeBatch:            batch.KodeBatch,
-		PolaPenggunaan:       produk.PolaPenggunaan,
-		TanggalPenggunaan:    tglPenggunaan.Format("2006-01-02"),
-		JumlahKemasanDipakai: sk.JumlahKemasanDipakai,
-		JumlahIsiDipakai:     sk.JumlahIsiDipakai,
-		Keterangan:           req.Keterangan,
-		CreatedAt:            sk.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:                sk.ID,
+		IDProduk:          req.IDProduk,
+		NamaProduk:        produk.NamaProduk,
+		KodeBatch:         batch.KodeBatch,
+		PolaPenggunaan:    produk.PolaPenggunaan,
+		TanggalPenggunaan: tglPenggunaan.Format("2006-01-02"),
+		JumlahIsiDipakai:  sk.JumlahIsiDipakai,
+		Keterangan:        req.Keterangan,
+		CreatedAt:         sk.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}, nil
 }

@@ -136,7 +136,7 @@ func (r *monitoringRepository) FindAllForMonitoring(ctx context.Context, filter 
 			ktQuery := `
 				SELECT id, bud, isi_tersisa, status_bud
 				FROM kemasan_terbuka
-				WHERE id_batch = $1
+				WHERE id_batch = $1 AND status_bud = 'AKTIF' AND isi_tersisa > 0
 				LIMIT 1
 			`
 			var ktID, ktStatus string

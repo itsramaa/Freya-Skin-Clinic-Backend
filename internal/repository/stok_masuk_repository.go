@@ -36,12 +36,14 @@ func (r *stokMasukRepository) Create(ctx context.Context, sm *model.StokMasuk) e
 
 func (r *stokMasukRepository) FindAll(ctx context.Context) ([]model.StokMasukResponse, error) {
 	query := `
-		SELECT sm.id, sm.id_produk, p.nama_produk, b.kode_batch,
-		       sm.tanggal_penerimaan, b.expired_date,
+		SELECT sm.id, sm.id_produk, p.kode_produk, p.nama_produk, k.nama_kategori,
+		       p.pola_penggunaan, p.satuan_isi, p.isi_per_kemasan,
+		       b.kode_batch, sm.tanggal_penerimaan, b.expired_date,
 		       sm.jumlah_kemasan, sm.total_isi_masuk,
 		       COALESCE(sm.keterangan, ''), sm.created_at
 		FROM stok_masuk sm
 		JOIN produk p ON p.id = sm.id_produk
+		JOIN kategori k ON k.id = p.id_kategori
 		JOIN batch_stok b ON b.id = sm.id_batch
 		ORDER BY sm.created_at DESC
 	`
@@ -56,8 +58,10 @@ func (r *stokMasukRepository) FindAll(ctx context.Context) ([]model.StokMasukRes
 		var s model.StokMasukResponse
 		var tgl, exp, created time.Time
 		if err := rows.Scan(
-			&s.ID, &s.IDProduk, &s.NamaProduk, &s.KodeBatch,
-			&tgl, &exp, &s.JumlahKemasan, &s.TotalIsiMasuk,
+			&s.ID, &s.IDProduk, &s.KodeProduk, &s.NamaProduk, &s.NamaKategori,
+			&s.PolaPenggunaan, &s.SatuanIsi, &s.IsiPerKemasan,
+			&s.KodeBatch, &tgl, &exp,
+			&s.JumlahKemasan, &s.TotalIsiMasuk,
 			&s.Keterangan, &created,
 		); err != nil {
 			return nil, err

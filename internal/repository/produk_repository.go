@@ -71,10 +71,17 @@ func (r *produkRepository) FindAll(ctx context.Context) ([]model.ProdukResponse,
 }
 
 func (r *produkRepository) FindByID(ctx context.Context, id string) (*model.Produk, error) {
-	query := `SELECT id, kode_produk, nama_produk, id_kategori, bentuk_kemasan, satuan_isi, isi_per_kemasan, pola_penggunaan, created_at, updated_at FROM produk WHERE id = $1`
+	query := `
+		SELECT p.id, p.kode_produk, p.nama_produk, p.id_kategori, k.nama_kategori,
+		       p.bentuk_kemasan, p.satuan_isi, p.isi_per_kemasan, p.pola_penggunaan,
+		       p.created_at, p.updated_at
+		FROM produk p
+		JOIN kategori k ON k.id = p.id_kategori
+		WHERE p.id = $1
+	`
 	var p model.Produk
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&p.ID, &p.KodeProduk, &p.NamaProduk, &p.IDKategori,
+		&p.ID, &p.KodeProduk, &p.NamaProduk, &p.IDKategori, &p.NamaKategori,
 		&p.BentukKemasan, &p.SatuanIsi, &p.IsiPerKemasan, &p.PolaPenggunaan,
 		&p.CreatedAt, &p.UpdatedAt,
 	)

@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	ErrStokMasukExpiredTooEarly    = errors.New("Tanggal kedaluwarsa tidak boleh kurang dari atau sama dengan tanggal penerimaan.")
-	ErrStokMasukTanggalFuture      = errors.New("Tanggal penerimaan tidak boleh melebihi tanggal hari ini.")
+	ErrStokMasukExpiredTooEarly = errors.New("Tanggal kedaluwarsa tidak boleh kurang dari atau sama dengan tanggal penerimaan.")
+	ErrStokMasukTanggalFuture   = errors.New("Tanggal penerimaan tidak boleh melebihi tanggal hari ini.")
 )
 
 type StokMasukService interface {
@@ -42,7 +42,6 @@ func (s *stokMasukService) GetAll(ctx context.Context) ([]model.StokMasukRespons
 }
 
 func (s *stokMasukService) Create(ctx context.Context, req model.StokMasukRequest, userID string) (*model.StokMasukResponse, error) {
-	// Parse tanggal
 	tglPenerimaan, err := time.Parse("2006-01-02", req.TanggalPenerimaan)
 	if err != nil {
 		return nil, errors.New("Format tanggal penerimaan tidak valid (YYYY-MM-DD)")
@@ -52,47 +51,42 @@ func (s *stokMasukService) Create(ctx context.Context, req model.StokMasukReques
 		return nil, errors.New("Format expired date tidak valid (YYYY-MM-DD)")
 	}
 
-	// Validasi: tanggal penerimaan tidak boleh di masa depan
 	if tglPenerimaan.After(time.Now().Truncate(24 * time.Hour)) {
 		return nil, ErrStokMasukTanggalFuture
 	}
-
-	// Validasi: expired date harus setelah tanggal penerimaan
 	if !expiredDate.After(tglPenerimaan) {
 		return nil, ErrStokMasukExpiredTooEarly
 	}
 
-	// Cek produk exist
 	produk, err := s.produkRepo.FindByID(ctx, req.IDProduk)
 	if err != nil {
 		return nil, ErrProdukKategoriNotFound
 	}
 
-	// Hitung total isi masuk
-	isiPerKemasan := 1.0
-	if produk.IsiPerKemasan != nil {
-		isiPerKemasan = *produk.IsiPerKemasan
+	// Hitung total_isi_masuk berdasarkan pola:
+	// - Full Use: total = jumlah_kemasan (unit kemasan, tidak dikali isi)
+	// - Partial Use: total = jumlah_kemasan * isi_per_kemasan
+	var totalIsiMasuk float64
+	if produk.PolaPenggunaan == "PARTIAL_USE" && produk.IsiPerKemasan != nil {
+		totalIsiMasuk = float64(req.JumlahKemasan) * *produk.IsiPerKemasan
+	} else {
+		totalIsiMasuk = float64(req.JumlahKemasan)
 	}
-	totalIsiMasuk := float64(req.JumlahKemasan) * isiPerKemasan
 
-	// Cek batch existing (merge jika ada)
 	existingBatch, err := s.batchRepo.FindByProdukAndExpired(ctx, req.IDProduk, expiredDate)
 	if err != nil {
 		return nil, err
 	}
 
-	var batchID string
-	var kodeBatch string
+	var batchID, kodeBatch string
 
 	if existingBatch != nil {
-		// Merge: tambah stok ke batch yang ada
 		if err := s.batchRepo.UpdateStok(ctx, existingBatch.ID, req.JumlahKemasan, totalIsiMasuk); err != nil {
 			return nil, err
 		}
 		batchID = existingBatch.ID
 		kodeBatch = existingBatch.KodeBatch
 	} else {
-		// Buat batch baru
 		newBatch := &model.BatchStok{
 			IDProduk:         req.IDProduk,
 			ExpiredDate:      expiredDate,
@@ -107,7 +101,6 @@ func (s *stokMasukService) Create(ctx context.Context, req model.StokMasukReques
 		kodeBatch = newBatch.KodeBatch
 	}
 
-	// Catat stok masuk
 	sm := &model.StokMasuk{
 		IDProduk:          req.IDProduk,
 		IDBatch:           batchID,
@@ -124,7 +117,12 @@ func (s *stokMasukService) Create(ctx context.Context, req model.StokMasukReques
 	return &model.StokMasukResponse{
 		ID:                sm.ID,
 		IDProduk:          req.IDProduk,
+		KodeProduk:        produk.KodeProduk,
 		NamaProduk:        produk.NamaProduk,
+		NamaKategori:      produk.NamaKategori,
+		PolaPenggunaan:    produk.PolaPenggunaan,
+		SatuanIsi:         produk.SatuanIsi,
+		IsiPerKemasan:     produk.IsiPerKemasan,
 		KodeBatch:         kodeBatch,
 		TanggalPenerimaan: tglPenerimaan.Format("2006-01-02"),
 		ExpiredDate:       expiredDate.Format("2006-01-02"),

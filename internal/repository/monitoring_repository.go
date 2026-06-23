@@ -93,11 +93,6 @@ func (r *monitoringRepository) FindAllForMonitoring(ctx context.Context, filter 
 			indikator = "MENDEKATI"
 		}
 
-		// Filter status_batch by indikator (AMAN/MENDEKATI/KADALUWARSA dari query param)
-		if filter.StatusBatch != "" && filter.StatusBatch != bStatus {
-			continue
-		}
-
 		batchItem := model.MonitoringBatchItem{
 			IDBatch:          bID,
 			KodeBatch:        bKodeBatch,
@@ -134,25 +129,27 @@ func (r *monitoringRepository) FindAllForMonitoring(ctx context.Context, filter 
 		}
 		for i, b := range p.Batches {
 			ktQuery := `
-				SELECT id, bud, isi_tersisa, status_bud
+				SELECT id, tanggal_dibuka, bud, isi_awal, isi_tersisa, status_bud
 				FROM kemasan_terbuka
-				WHERE id_batch = $1 AND status_bud = 'AKTIF' AND isi_tersisa > 0
+				WHERE id_batch = $1
 				LIMIT 1
 			`
 			var ktID, ktStatus string
-			var ktBUD time.Time
-			var ktIsi float64
-			err := r.db.QueryRow(ctx, ktQuery, b.IDBatch).Scan(&ktID, &ktBUD, &ktIsi, &ktStatus)
+			var ktTanggalDibuka, ktBUD time.Time
+			var ktIsiAwal, ktIsi float64
+			err := r.db.QueryRow(ctx, ktQuery, b.IDBatch).Scan(&ktID, &ktTanggalDibuka, &ktBUD, &ktIsiAwal, &ktIsi, &ktStatus)
 			if err == nil {
-				// Filter status BUD
+				// Filter status BUD jika ada
 				if filter.StatusBUD != "" && filter.StatusBUD != ktStatus {
 					continue
 				}
 				p.Batches[i].KemasanTerbuka = &model.MonitoringKemasanTerbuka{
-					ID:         ktID,
-					BUD:        ktBUD.Format("2006-01-02"),
-					IsiTersisa: ktIsi,
-					StatusBUD:  ktStatus,
+					ID:            ktID,
+					TanggalDibuka: ktTanggalDibuka.Format("2006-01-02"),
+					BUD:           ktBUD.Format("2006-01-02"),
+					IsiAwal:       ktIsiAwal,
+					IsiTersisa:    ktIsi,
+					StatusBUD:     ktStatus,
 				}
 			}
 		}

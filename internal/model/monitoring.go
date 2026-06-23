@@ -17,10 +17,12 @@ type MonitoringBatchItem struct {
 }
 
 type MonitoringKemasanTerbuka struct {
-	ID         string  `json:"id"`
-	BUD        string  `json:"bud"`
-	IsiTersisa float64 `json:"isi_tersisa"`
-	StatusBUD  string  `json:"status_bud"`
+	ID             string  `json:"id"`
+	TanggalDibuka  string  `json:"tanggal_dibuka"`
+	BUD            string  `json:"bud"`
+	IsiAwal        float64 `json:"isi_awal"`
+	IsiTersisa     float64 `json:"isi_tersisa"`
+	StatusBUD      string  `json:"status_bud"`
 }
 
 type MonitoringProdukItem struct {

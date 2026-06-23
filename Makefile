@@ -1,0 +1,146 @@
+# SiHuni Go API — Makefile
+# Usage: make <target>
+
+BINARY_NAME=sihuni-api
+BUILD_DIR=./bin
+CMD_PATH=./cmd/api
+VALIDATOR=./cmd/api-validate
+MIGRATE_PATH=./cmd/migrate
+MIGRATE_BINARY=$(BUILD_DIR)/migrate
+MIGRATE=go run $(MIGRATE_PATH)
+
+.PHONY: all dev build test lint clean \
+        migrate-up migrate-up-one migrate-up-to migrate-down migrate-down-to \
+        migrate-reset migrate-status migrate-version migrate-create migrate-create-go \
+        migrate-fix migrate-validate migrate-seed migrate-build \
+        docs
+
+all: build
+
+## dev: Run the server with live reload (requires air: go install github.com/air-verse/air@latest)
+dev:
+	@which air > /dev/null 2>&1 || (echo "air not found. Install: go install github.com/air-verse/air@latest" && exit 1)
+	air
+
+## build: Compile the binary to ./bin/sihuni-api
+build:
+	@mkdir -p $(BUILD_DIR)
+	go build -o $(BUILD_DIR)/$(BINARY_NAME) $(CMD_PATH)
+	@echo "Built $(BUILD_DIR)/$(BINARY_NAME)"
+
+## run: Build and run the binary directly
+run: build
+	$(BUILD_DIR)/$(BINARY_NAME)
+
+## test: Run all unit tests with race detector
+test:
+	go test -race -v ./...
+
+## test-short: Run tests without verbose output
+test-short:
+	go test ./...
+
+## lint: Run golangci-lint
+lint:
+	@which golangci-lint > /dev/null 2>&1 || (echo "golangci-lint not found. Install: go install github.com/golangci-lint/cmd/golangci-lint@latest" && exit 1)
+	golangci-lint run ./...
+
+## tidy: Tidy go modules
+tidy:
+	go mod tidy
+
+## clean: Remove build artifacts
+clean:
+	rm -rf $(BUILD_DIR)
+
+## docker-up: Start local PostgreSQL via Docker Compose
+docker-up:
+	docker compose up -d db
+
+## docker-down: Stop local PostgreSQL
+docker-down:
+	docker compose down
+
+# ── Migrations (embedded goose via cmd/migrate) ────────────────────────────────
+
+## migrate-build: Build migration binary ke ./bin/migrate
+migrate-build:
+	@mkdir -p $(BUILD_DIR)
+	go build -o $(MIGRATE_BINARY) $(MIGRATE_PATH)
+	@echo "Built $(MIGRATE_BINARY)"
+
+## migrate-up: Apply semua pending migrations
+migrate-up:
+	$(MIGRATE) up
+
+## migrate-up-one: Apply satu migration berikutnya
+migrate-up-one:
+	$(MIGRATE) up-by-one
+
+## migrate-up-to VERSION=<version>: Apply sampai versi tertentu
+migrate-up-to:
+	@ [ "$(VERSION)" ] || (echo "Usage: make migrate-up-to VERSION=<number>" && exit 1)
+	$(MIGRATE) up-to $(VERSION)
+
+## migrate-down: Rollback migration terakhir
+migrate-down:
+	$(MIGRATE) down
+
+## migrate-down-to VERSION=<version>: Rollback sampai versi tertentu
+migrate-down-to:
+	@ [ "$(VERSION)" ] || (echo "Usage: make migrate-down-to VERSION=<number>" && exit 1)
+	$(MIGRATE) down-to $(VERSION)
+
+## migrate-reset: Rollback SEMUA migrations (DESTRUCTIVE!)
+migrate-reset:
+	$(MIGRATE) reset
+
+## migrate-status: Tampilkan status semua migrations
+migrate-status:
+	$(MIGRATE) status
+
+## migrate-version: Tampilkan versi migration aktif
+migrate-version:
+	$(MIGRATE) version
+
+## migrate-create NAME=<name>: Buat SQL migration file baru
+migrate-create:
+	@ [ "$(NAME)" ] || (echo "Usage: make migrate-create NAME=<migration_name>" && exit 1)
+	$(MIGRATE) create $(NAME)
+
+## migrate-create-go NAME=<name>: Buat Go migration file baru
+migrate-create-go:
+	@ [ "$(NAME)" ] || (echo "Usage: make migrate-create-go NAME=<migration_name>" && exit 1)
+	$(MIGRATE) create-go $(NAME)
+
+## migrate-fix: Normalisasi urutan file migration
+migrate-fix:
+	$(MIGRATE) fix
+
+## migrate-validate: Validasi semua migration files
+migrate-validate:
+	$(MIGRATE) validate
+
+## migrate-seed: Apply migrations (seed user sudah ada di migration 000002)
+migrate-seed: migrate-up
+	@echo "Migrations applied. Seed user sudah termasuk di migration 000002."
+
+# ── API Documentation ──────────────────────────────────────────────────────────
+
+## docs: Open Scalar API docs in browser (server must be running)
+docs:
+	@echo "Scalar API Docs: http://localhost:8080/docs"
+	@echo "OpenAPI JSON:    http://localhost:8080/openapi.json"
+
+## docs-validate: Validate openapi.json against Go source
+docs-validate:
+	go run $(VALIDATOR)
+
+## docs-watch: Watch openapi.json changes and revalidate
+docs-watch:
+	@echo "Watching openapi.json for changes... (Ctrl+C to stop)"
+	@powershell -Command "$$f='api/openapi.json'; $$last=(Get-Item $$f).LastWriteTime; Write-Host 'Watching api/openapi.json...'; while(1){Start-Sleep 1;if((Get-Item $$f).LastWriteTime -ne $$last){$$last=(Get-Item $$f).LastWriteTime; go run ./cmd/api-validate}}"
+
+## help: Show this help
+help:
+	@grep -E '^## ' Makefile | sed 's/## //'

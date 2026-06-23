@@ -9,9 +9,10 @@ import (
 	"freya-skin-clinic-backend/internal/config"
 	"freya-skin-clinic-backend/internal/handler"
 	"freya-skin-clinic-backend/internal/middleware"
+	"freya-skin-clinic-backend/internal/repository"
 )
 
-func Setup(cfg *config.Config, authHandler *handler.AuthHandler, kategoriHandler *handler.KategoriHandler, produkHandler *handler.ProdukHandler, stokMasukHandler *handler.StokMasukHandler, stokKeluarHandler *handler.StokKeluarHandler, monitoringHandler *handler.MonitoringHandler, opnameHandler *handler.OpnameHandler, laporanHandler *handler.LaporanHandler) *fiber.App {
+func Setup(cfg *config.Config, userRepo repository.UserRepository, authHandler *handler.AuthHandler, kategoriHandler *handler.KategoriHandler, produkHandler *handler.ProdukHandler, stokMasukHandler *handler.StokMasukHandler, stokKeluarHandler *handler.StokKeluarHandler, monitoringHandler *handler.MonitoringHandler, opnameHandler *handler.OpnameHandler, laporanHandler *handler.LaporanHandler) *fiber.App {
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
@@ -41,7 +42,7 @@ func Setup(cfg *config.Config, authHandler *handler.AuthHandler, kategoriHandler
 	auth.Post("/login", authHandler.Login)
 
 	// Protected routes
-	protected := api.Group("/", middleware.JWTMiddleware(cfg))
+	protected := api.Group("/", middleware.JWTMiddleware(cfg, userRepo))
 	protected.Put("/auth/password", authHandler.ChangePassword)
 
 	// Kategori routes

@@ -75,7 +75,7 @@ func main() {
 	laporanHandler := handler.NewLaporanHandler(laporanSvc)
 
 	// Setup router
-	app := router.Setup(cfg, authHandler, kategoriHandler, produkHandler, stokMasukHandler, stokKeluarHandler, monitoringHandler, opnameHandler, laporanHandler)
+	app := router.Setup(cfg, userRepo, authHandler, kategoriHandler, produkHandler, stokMasukHandler, stokKeluarHandler, monitoringHandler, opnameHandler, laporanHandler)
 
 	// Start background worker
 	workerSvc := service.NewWorkerService(batchRepo, kemasanRepo)

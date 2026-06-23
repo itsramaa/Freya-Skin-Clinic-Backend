@@ -1,0 +1,124 @@
+# ============================
+# Dependencies
+# ============================
+node_modules/
+**/node_modules/
+.pnp
+.pnp.js
+.yarn/
+vendor/
+.bun/
+
+# ============================
+# Build / Output
+# ============================
+.next/
+out/
+dist/
+build/
+.turbo/
+.vercel/
+.netlify/
+*.tsbuildinfo
+next-env.d.ts
+
+# Go build artifacts
+bin/
+**/*.exe
+**/*.test
+**/*.out
+
+# ============================
+# Logs
+# ============================
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ============================
+# Environment & Secrets
+# ============================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# ============================
+# Cache
+# ============================
+.cache/
+.eslintcache
+.parcel-cache/
+.swc/
+.go-build-cache/
+$GOPATH/pkg/mod/
+.golangci-cache/
+
+# ============================
+# Testing & Coverage
+# ============================
+coverage/
+.nyc_output/
+*.lcov
+test-results/
+playwright-report/
+
+# ============================
+# IDE / Editor
+# ============================
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ============================
+# Database / Migrations data dumps
+# ============================
+*.sql.gz
+*.dump
+*.sqlite
+*.sqlite3
+db_data/
+postgres_data/
+
+# ============================
+# Generated / Auto-generated files
+# ============================
+**/*.gen.go
+**/*_gen.go
+**/mocks/
+**/__generated__/
+**/*.pb.go
+**/openapi.generated.*
+graphql/generated/
+
+# ============================
+# Lock files (opsional — biasanya besar & noisy untuk indexing)
+# ============================
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+go.sum
+
+# ============================
+# Monorepo / Workspace noise
+# ============================
+**/.turbo/
+storybook-static/
+
+# ============================
+# Misc large/binary assets
+# ============================
+*.zip
+*.tar.gz
+*.mp4
+*.mov
+*.psd
+*.fig

@@ -30,9 +30,9 @@
 ## 6. Verifikasi
 
 - [x] 6.1 Build backend berhasil tanpa error: `go build ./...`
-- [ ] 6.2 Test full use: submit stok keluar produk FULL_USE → berhasil tersimpan
-- [ ] 6.3 Test partial buka kemasan baru: setelah kemasan 1 habis, submit lagi → kemasan baru terbuka
-- [ ] 6.4 Test response monitoring: field `satuan_isi` muncul di response `/api/monitoring`
-- [ ] 6.5 Test response laporan stok keluar: field `satuan_isi` muncul di response `/api/laporan/stok-keluar`
-- [ ] 6.6 Test response laporan sisa stok: field `satuan_isi` muncul di response `/api/laporan/sisa-stok`
-- [ ] 6.7 Test SQL ReduceStok: batch ter-set HABIS setelah stok kemasan habis dan tidak ada kemasan terbuka aktif
+- [x] 6.2 Test full use: submit stok keluar produk FULL_USE → berhasil tersimpan
+- [x] 6.3 Test partial buka kemasan baru: setelah kemasan 1 habis, submit lagi → kemasan baru terbuka
+- [x] 6.4 Test response monitoring: field `satuan_isi` muncul di response `/api/monitoring`
+- [x] 6.5 Test response laporan stok keluar: field `satuan_isi` muncul di response `/api/laporan/stok-keluar`
+- [x] 6.6 Test response laporan sisa stok: field `satuan_isi` muncul di response `/api/laporan/sisa-stok`
+- [x] 6.7 Test SQL ReduceStok: batch ter-set HABIS setelah stok kemasan habis dan tidak ada kemasan terbuka aktif

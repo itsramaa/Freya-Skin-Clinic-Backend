@@ -63,6 +63,8 @@ func Setup(cfg *config.Config, userRepo repository.UserRepository, authHandler *
 	stokMasuk := protected.Group("/stok-masuk")
 	stokMasuk.Get("/", stokMasukHandler.GetAll)
 	stokMasuk.Post("/", stokMasukHandler.Create)
+	stokMasuk.Put("/:id", stokMasukHandler.Update)
+	stokMasuk.Delete("/:id", stokMasukHandler.Delete)
 
 	// Stok Keluar routes
 	stokKeluar := protected.Group("/stok-keluar")

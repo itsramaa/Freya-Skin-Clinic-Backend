@@ -62,3 +62,41 @@ func (h *StokMasukHandler) Create(c *fiber.Ctx) error {
 	}
 	return response.Success(c, http.StatusCreated, "Data stok masuk berhasil disimpan.", data)
 }
+
+func (h *StokMasukHandler) Update(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var req model.UpdateStokMasukRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.Error(c, http.StatusBadRequest, "Format request tidak valid.", nil)
+	}
+	if req.JumlahKemasan <= 0 {
+		return response.Error(c, http.StatusBadRequest, "Jumlah kemasan harus lebih dari 0.", nil)
+	}
+
+	err := h.svc.Update(c.Context(), id, req)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrBatchSudahDigunakan):
+			return response.Error(c, http.StatusBadRequest, "Batch sudah digunakan dalam transaksi stok keluar, tidak dapat diubah.", nil)
+		case errors.Is(err, service.ErrProdukKategoriNotFound):
+			return response.Error(c, http.StatusNotFound, "Produk tidak ditemukan.", nil)
+		default:
+			return response.Error(c, http.StatusInternalServerError, "Gagal mengubah data stok masuk. Silakan coba lagi.", nil)
+		}
+	}
+	return response.Success(c, http.StatusOK, "Data stok masuk berhasil diubah.", nil)
+}
+
+func (h *StokMasukHandler) Delete(c *fiber.Ctx) error {
+	id := c.Params("id")
+	err := h.svc.Delete(c.Context(), id)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrBatchSudahDigunakan):
+			return response.Error(c, http.StatusBadRequest, "Batch sudah digunakan dalam transaksi stok keluar, tidak dapat dihapus.", nil)
+		default:
+			return response.Error(c, http.StatusInternalServerError, "Gagal menghapus data stok masuk. Silakan coba lagi.", nil)
+		}
+	}
+	return response.Success(c, http.StatusOK, "Data stok masuk berhasil dihapus.", nil)
+}

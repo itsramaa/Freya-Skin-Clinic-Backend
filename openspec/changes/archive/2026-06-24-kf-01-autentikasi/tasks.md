@@ -51,10 +51,10 @@
 
 ## 11. Verifikasi
 
-- [ ] 11.1 Verifikasi `POST /api/auth/login` dengan kredensial valid
-- [ ] 11.2 Verifikasi `POST /api/auth/login` dengan kredensial salah → 401
-- [ ] 11.3 Verifikasi `PUT /api/auth/password` dengan token valid → 200
-- [ ] 11.4 Verifikasi `PUT /api/auth/password` tanpa token → 401
-- [ ] 11.5 Verifikasi request endpoint lain tanpa token → 401
-- [ ] 11.6 Verifikasi password tidak muncul plain text di response
+- [x] 11.1 Verifikasi `POST /api/auth/login` dengan kredensial valid
+- [x] 11.2 Verifikasi `POST /api/auth/login` dengan kredensial salah → 401
+- [x] 11.3 Verifikasi `PUT /api/auth/password` dengan token valid → 200
+- [x] 11.4 Verifikasi `PUT /api/auth/password` tanpa token → 401
+- [x] 11.5 Verifikasi request endpoint lain tanpa token → 401
+- [x] 11.6 Verifikasi password tidak muncul plain text di response
 - [x] 11.7 Jalankan `go build ./...` — tidak ada compile error

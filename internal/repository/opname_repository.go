@@ -12,6 +12,7 @@ import (
 )
 
 var ErrOpnameNotFound = errors.New("sesi opname tidak ditemukan")
+var ErrKeteranganWajib = errors.New("keterangan wajib diisi untuk item yang memiliki selisih")
 
 type OpnameRepository interface {
 	Create(ctx context.Context, op *model.StokOpname) error
@@ -146,6 +147,11 @@ func (r *opnameRepository) SaveDetailAndAdjust(ctx context.Context, idOpname str
 
 		selisih := d.StokFisik - stokSistem
 
+		// Validasi keterangan wajib jika ada selisih
+		if selisih != 0 && d.Keterangan == "" {
+			return ErrKeteranganWajib
+		}
+
 		// Insert detail_opname
 		_, err = tx.Exec(ctx, `
 			INSERT INTO detail_opname (id_opname, id_batch, id_kemasan_terbuka, stok_sistem, stok_fisik, selisih, keterangan)
@@ -159,7 +165,12 @@ func (r *opnameRepository) SaveDetailAndAdjust(ctx context.Context, idOpname str
 		// Penyesuaian stok jika ada selisih
 		if selisih != 0 {
 			if d.IDKemasanTerbuka != nil {
-				_, err = tx.Exec(ctx, `UPDATE kemasan_terbuka SET isi_tersisa = $1, updated_at = NOW() WHERE id = $2`, d.StokFisik, *d.IDKemasanTerbuka)
+				// Partial use: gunakan SisaIsiTerbuka jika ada, fallback ke StokFisik
+				sisaIsi := d.StokFisik
+				if d.SisaIsiTerbuka != nil {
+					sisaIsi = *d.SisaIsiTerbuka
+				}
+				_, err = tx.Exec(ctx, `UPDATE kemasan_terbuka SET isi_tersisa = $1, updated_at = NOW() WHERE id = $2`, sisaIsi, *d.IDKemasanTerbuka)
 			} else {
 				_, err = tx.Exec(ctx, `UPDATE batch_stok SET stok_kemasan = $1, updated_at = NOW() WHERE id = $2`, int(d.StokFisik), d.IDBatch)
 			}

@@ -12,11 +12,14 @@ import (
 var (
 	ErrStokMasukExpiredTooEarly = errors.New("Tanggal kedaluwarsa tidak boleh kurang dari atau sama dengan tanggal penerimaan.")
 	ErrStokMasukTanggalFuture   = errors.New("Tanggal penerimaan tidak boleh melebihi tanggal hari ini.")
+	ErrBatchSudahDigunakan      = errors.New("Batch sudah digunakan dalam transaksi stok keluar, tidak dapat diubah atau dihapus.")
 )
 
 type StokMasukService interface {
 	Create(ctx context.Context, req model.StokMasukRequest, userID string) (*model.StokMasukResponse, error)
 	GetAll(ctx context.Context) ([]model.StokMasukResponse, error)
+	Update(ctx context.Context, id string, req model.UpdateStokMasukRequest) error
+	Delete(ctx context.Context, id string) error
 }
 
 type stokMasukService struct {
@@ -131,4 +134,56 @@ func (s *stokMasukService) Create(ctx context.Context, req model.StokMasukReques
 		Keterangan:        req.Keterangan,
 		CreatedAt:         sm.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}, nil
+}
+
+func (s *stokMasukService) Update(ctx context.Context, id string, req model.UpdateStokMasukRequest) error {
+	existing, err := s.stokMasukRepo.FindByID(ctx, id)
+	if err != nil {
+		return errors.New("Data stok masuk tidak ditemukan.")
+	}
+
+	used, err := s.stokMasukRepo.CheckBatchUsed(ctx, existing.IDBatch)
+	if err != nil {
+		return err
+	}
+	if used {
+		return ErrBatchSudahDigunakan
+	}
+
+	if req.JumlahKemasan <= 0 {
+		return errors.New("Jumlah kemasan harus lebih dari 0.")
+	}
+
+	deltaKemasan := req.JumlahKemasan - existing.JumlahKemasan
+
+	produk, err := s.produkRepo.FindByID(ctx, existing.IDProduk)
+	if err != nil {
+		return ErrProdukKategoriNotFound
+	}
+
+	var deltaIsi float64
+	if produk.PolaPenggunaan == "PARTIAL_USE" && produk.IsiPerKemasan != nil {
+		deltaIsi = float64(deltaKemasan) * *produk.IsiPerKemasan
+	} else {
+		deltaIsi = float64(deltaKemasan)
+	}
+
+	return s.stokMasukRepo.Update(ctx, id, req, deltaKemasan, deltaIsi)
+}
+
+func (s *stokMasukService) Delete(ctx context.Context, id string) error {
+	existing, err := s.stokMasukRepo.FindByID(ctx, id)
+	if err != nil {
+		return errors.New("Data stok masuk tidak ditemukan.")
+	}
+
+	used, err := s.stokMasukRepo.CheckBatchUsed(ctx, existing.IDBatch)
+	if err != nil {
+		return err
+	}
+	if used {
+		return ErrBatchSudahDigunakan
+	}
+
+	return s.stokMasukRepo.Delete(ctx, id, existing.IDBatch)
 }

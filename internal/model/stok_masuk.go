@@ -34,6 +34,12 @@ type StokMasukRequest struct {
 	Keterangan        string `json:"keterangan"`
 }
 
+type UpdateStokMasukRequest struct {
+	TanggalPenerimaan string `json:"tanggal_penerimaan" validate:"required"`
+	JumlahKemasan     int    `json:"jumlah_kemasan" validate:"required,min=1"`
+	Keterangan        string `json:"keterangan"`
+}
+
 type StokMasukResponse struct {
 	ID                string   `json:"id"`
 	IDProduk          string   `json:"id_produk"`

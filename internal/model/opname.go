@@ -24,10 +24,11 @@ type DetailOpname struct {
 }
 
 type DetailOpnameInput struct {
-	IDBatch          string  `json:"id_batch"`
-	IDKemasanTerbuka *string `json:"id_kemasan_terbuka"`
-	StokFisik        float64 `json:"stok_fisik"`
-	Keterangan       string  `json:"keterangan"`
+	IDBatch          string   `json:"id_batch"`
+	IDKemasanTerbuka *string  `json:"id_kemasan_terbuka"`
+	StokFisik        float64  `json:"stok_fisik"`
+	SisaIsiTerbuka   *float64 `json:"sisa_isi_terbuka"`
+	Keterangan       string   `json:"keterangan"`
 }
 
 type SelesaikanOpnameRequest struct {

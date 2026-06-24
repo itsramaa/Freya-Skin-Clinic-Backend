@@ -64,7 +64,8 @@ func (h *OpnameHandler) SelesaikanOpname(c *fiber.Ctx) error {
 		switch {
 		case errors.Is(err, repository.ErrOpnameNotFound):
 			return response.Error(c, http.StatusNotFound, "Sesi opname tidak ditemukan.", nil)
-		case errors.Is(err, service.ErrOpnameKeteranganWajib):
+		case errors.Is(err, service.ErrOpnameKeteranganWajib),
+			errors.Is(err, repository.ErrKeteranganWajib):
 			return response.Error(c, http.StatusBadRequest, "Keterangan wajib diisi untuk setiap item yang memiliki selisih stok.", nil)
 		default:
 			return response.Error(c, http.StatusInternalServerError, err.Error(), nil)

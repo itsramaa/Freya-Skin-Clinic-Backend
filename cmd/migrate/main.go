@@ -1,4 +1,4 @@
-// cmd/migrate/main.go — Migration tool untuk SiHuni API
+// cmd/migrate/main.go — Migration tool untuk Freya Skin Clinic API
 // Penggunaan:
 //   go run ./cmd/migrate [command] [flags]
 //
@@ -35,12 +35,13 @@ import (
 const migrationsDir = "./migrations"
 
 func main() {
-	// Load .env jika ada
-	_ = godotenv.Load()
-
 	// Parse flags
 	dir := flag.String("dir", migrationsDir, "Direktori migration files")
+	envFile := flag.String("env", ".env", "Path ke file environment (.env, .env.production, dll)")
 	flag.Parse()
+
+	// Load env file
+	_ = godotenv.Load(*envFile)
 
 	args := flag.Args()
 	if len(args) == 0 {

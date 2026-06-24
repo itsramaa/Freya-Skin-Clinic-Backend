@@ -70,6 +70,8 @@ func (h *StokKeluarHandler) Create(c *fiber.Ctx) error {
 			return response.Error(c, http.StatusBadRequest, "Tidak ada stok aktif untuk produk ini.", nil)
 		case errors.Is(err, service.ErrIsiDipakaiMelebihiSisa):
 			return response.Error(c, http.StatusBadRequest, "Jumlah isi yang dipakai melebihi sisa isi kemasan terbuka.", nil)
+		case errors.Is(err, service.ErrIsiPerKemasanTidakDiset):
+			return response.Error(c, http.StatusBadRequest, "Produk tidak memiliki konfigurasi isi per kemasan.", nil)
 		case errors.Is(err, service.ErrProdukKategoriNotFound):
 			return response.Error(c, http.StatusNotFound, "Produk tidak ditemukan.", nil)
 		default:

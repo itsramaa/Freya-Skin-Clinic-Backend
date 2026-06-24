@@ -10,9 +10,10 @@ import (
 )
 
 var (
-	ErrStokKurang             = errors.New("Stok tidak mencukupi untuk jumlah yang diminta.")
-	ErrTidakAdaBatch          = errors.New("Tidak ada stok aktif untuk produk ini.")
-	ErrIsiDipakaiMelebihiSisa = errors.New("Jumlah isi yang dipakai melebihi sisa isi kemasan terbuka.")
+	ErrStokKurang              = errors.New("Stok tidak mencukupi untuk jumlah yang diminta.")
+	ErrTidakAdaBatch           = errors.New("Tidak ada stok aktif untuk produk ini.")
+	ErrIsiDipakaiMelebihiSisa  = errors.New("Jumlah isi yang dipakai melebihi sisa isi kemasan terbuka.")
+	ErrIsiPerKemasanTidakDiset = errors.New("Produk tidak memiliki konfigurasi isi per kemasan.")
 )
 
 type StokKeluarService interface {
@@ -224,10 +225,10 @@ func (s *stokKeluarService) Create(ctx context.Context, req model.StokKeluarRequ
 		if batch.StokKemasan < 1 {
 			return nil, ErrStokKurang
 		}
-		isiPerKemasan := 1.0
-		if produk.IsiPerKemasan != nil {
-			isiPerKemasan = *produk.IsiPerKemasan
+		if produk.IsiPerKemasan == nil {
+			return nil, ErrIsiPerKemasanTidakDiset
 		}
+		isiPerKemasan := *produk.IsiPerKemasan
 		if req.JumlahIsiDipakai > isiPerKemasan {
 			return nil, ErrIsiDipakaiMelebihiSisa
 		}

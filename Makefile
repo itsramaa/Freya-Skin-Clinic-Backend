@@ -1,7 +1,7 @@
-# SiHuni Go API — Makefile
+# Freya Skin Clinic Backend — Makefile
 # Usage: make <target>
 
-BINARY_NAME=sihuni-api
+BINARY_NAME=freya-api
 BUILD_DIR=./bin
 CMD_PATH=./cmd/api
 VALIDATOR=./cmd/api-validate
@@ -13,6 +13,10 @@ MIGRATE=go run $(MIGRATE_PATH)
         migrate-up migrate-up-one migrate-up-to migrate-down migrate-down-to \
         migrate-reset migrate-status migrate-version migrate-create migrate-create-go \
         migrate-fix migrate-validate migrate-seed migrate-build \
+        migrate-up-prod migrate-up-one-prod migrate-up-to-prod \
+        migrate-down-prod migrate-down-to-prod migrate-reset-prod \
+        migrate-status-prod migrate-version-prod \
+        migrate-seed-prod \
         docs
 
 all: build
@@ -123,6 +127,46 @@ migrate-validate:
 
 ## migrate-seed: Apply migrations (seed user sudah ada di migration 000002)
 migrate-seed: migrate-up
+	@echo "Migrations applied. Seed user sudah termasuk di migration 000002."
+
+# ── Production Migrations (pakai .env.production) ──────────────────────────────
+
+## migrate-up-prod: Apply semua pending migrations pakai .env.production
+migrate-up-prod:
+	$(MIGRATE) -env .env.production up
+
+## migrate-up-one-prod: Apply satu migration berikutnya pakai .env.production
+migrate-up-one-prod:
+	$(MIGRATE) -env .env.production up-by-one
+
+## migrate-up-to-prod VERSION=<version>: Apply sampai versi tertentu pakai .env.production
+migrate-up-to-prod:
+	@ [ "$(VERSION)" ] || (echo "Usage: make migrate-up-to-prod VERSION=<number>" && exit 1)
+	$(MIGRATE) -env .env.production up-to $(VERSION)
+
+## migrate-down-prod: Rollback migration terakhir pakai .env.production
+migrate-down-prod:
+	$(MIGRATE) -env .env.production down
+
+## migrate-down-to-prod VERSION=<version>: Rollback sampai versi tertentu pakai .env.production
+migrate-down-to-prod:
+	@ [ "$(VERSION)" ] || (echo "Usage: make migrate-down-to-prod VERSION=<number>" && exit 1)
+	$(MIGRATE) -env .env.production down-to $(VERSION)
+
+## migrate-reset-prod: Rollback SEMUA migrations pakai .env.production (DESTRUCTIVE!)
+migrate-reset-prod:
+	$(MIGRATE) -env .env.production reset
+
+## migrate-status-prod: Status migrations pakai .env.production
+migrate-status-prod:
+	$(MIGRATE) -env .env.production status
+
+## migrate-version-prod: Versi migration aktif pakai .env.production
+migrate-version-prod:
+	$(MIGRATE) -env .env.production version
+
+## migrate-seed-prod: Apply migrations pakai .env.production (seed user sudah ada di migration 000002)
+migrate-seed-prod: migrate-up-prod
 	@echo "Migrations applied. Seed user sudah termasuk di migration 000002."
 
 # ── API Documentation ──────────────────────────────────────────────────────────

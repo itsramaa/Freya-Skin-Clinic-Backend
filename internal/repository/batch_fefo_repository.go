@@ -78,17 +78,18 @@ func (r *batchFEFORepository) FindBatchPartialUseFEFO(ctx context.Context, idPro
 
 func (r *batchFEFORepository) ReduceStok(ctx context.Context, id string, kurangiKemasan int, kurangiIsi float64) error {
 	query := `
-		UPDATE batch_stok
-		SET stok_kemasan = stok_kemasan - $1,
-		    total_isi_tersedia = total_isi_tersedia - $2,
+		UPDATE batch_stok bs
+		SET stok_kemasan = bs.stok_kemasan - $1,
+		    total_isi_tersedia = bs.total_isi_tersedia - $2,
 		    status = CASE
-		        WHEN (stok_kemasan - $1) <= 0 AND NOT EXISTS (
-		            SELECT 1 FROM kemasan_terbuka WHERE id_batch = id AND status_bud = 'AKTIF' AND isi_tersisa > 0
+		        WHEN (bs.stok_kemasan - $1) <= 0 AND NOT EXISTS (
+		            SELECT 1 FROM kemasan_terbuka kt
+		            WHERE kt.id_batch = bs.id AND kt.status_bud = 'AKTIF' AND kt.isi_tersisa > 0
 		        ) THEN 'HABIS'
-		        ELSE status
+		        ELSE bs.status
 		    END,
 		    updated_at = NOW()
-		WHERE id = $3
+		WHERE bs.id = $3
 	`
 	_, err := r.db.Exec(ctx, query, kurangiKemasan, kurangiIsi, id)
 	return err

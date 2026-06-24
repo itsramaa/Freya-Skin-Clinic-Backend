@@ -28,7 +28,7 @@ func (r *monitoringRepository) FindAllForMonitoring(ctx context.Context, filter 
 	query := `
 		SELECT b.id, b.id_produk, b.kode_batch, b.expired_date,
 		       b.stok_kemasan, b.total_isi_tersedia, b.status,
-		       p.id, p.kode_produk, p.nama_produk, p.id_kategori, p.pola_penggunaan,
+		       p.id, p.kode_produk, p.nama_produk, p.id_kategori, p.pola_penggunaan, p.satuan_isi,
 		       k.nama_kategori
 		FROM batch_stok b
 		JOIN produk p ON p.id = b.id_produk
@@ -67,17 +67,17 @@ func (r *monitoringRepository) FindAllForMonitoring(ctx context.Context, filter 
 
 	for rows.Next() {
 		var (
-			bID, bIDProduk, bKodeBatch, bStatus   string
-			bExpiredDate                          time.Time
-			bStokKemasan                          int
-			bTotalIsi                             float64
-			pID, pKode, pNama, pIDKategori, pPola string
-			kNama                                 string
+			bID, bIDProduk, bKodeBatch, bStatus            string
+			bExpiredDate                                   time.Time
+			bStokKemasan                                   int
+			bTotalIsi                                      float64
+			pID, pKode, pNama, pIDKategori, pPola, pSatuan string
+			kNama                                          string
 		)
 		if err := rows.Scan(
 			&bID, &bIDProduk, &bKodeBatch, &bExpiredDate,
 			&bStokKemasan, &bTotalIsi, &bStatus,
-			&pID, &pKode, &pNama, &pIDKategori, &pPola,
+			&pID, &pKode, &pNama, &pIDKategori, &pPola, &pSatuan,
 			&kNama,
 		); err != nil {
 			return nil, err
@@ -111,6 +111,7 @@ func (r *monitoringRepository) FindAllForMonitoring(ctx context.Context, filter 
 				IDKategori:     pIDKategori,
 				NamaKategori:   kNama,
 				PolaPenggunaan: pPola,
+				SatuanIsi:      pSatuan,
 				Batches:        []model.MonitoringBatchItem{},
 			}
 			produkOrder = append(produkOrder, pID)

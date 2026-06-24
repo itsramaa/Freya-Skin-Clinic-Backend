@@ -25,6 +25,7 @@ type LaporanStokKeluarItem struct {
 	NamaKategori         string  `json:"nama_kategori"`
 	KodeBatch            string  `json:"kode_batch"`
 	PolaPenggunaan       string  `json:"pola_penggunaan"`
+	SatuanIsi            string  `json:"satuan_isi"`
 	JumlahKemasanDipakai int     `json:"jumlah_kemasan_dipakai"`
 	JumlahIsiDipakai     float64 `json:"jumlah_isi_dipakai"`
 	Keterangan           string  `json:"keterangan"`
@@ -35,6 +36,7 @@ type LaporanSisaStokItem struct {
 	NamaProduk     string  `json:"nama_produk"`
 	NamaKategori   string  `json:"nama_kategori"`
 	PolaPenggunaan string  `json:"pola_penggunaan"`
+	SatuanIsi      string  `json:"satuan_isi"`
 	TotalStok      int     `json:"total_stok"`
 	TotalIsi       float64 `json:"total_isi"`
 }

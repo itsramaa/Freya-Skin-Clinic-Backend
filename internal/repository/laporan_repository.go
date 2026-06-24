@@ -78,7 +78,7 @@ func (r *laporanRepository) GetStokMasuk(ctx context.Context, filter model.Lapor
 func (r *laporanRepository) GetStokKeluar(ctx context.Context, filter model.LaporanFilter) ([]model.LaporanStokKeluarItem, error) {
 	query := `
 		SELECT sk.id, sk.tanggal_penggunaan, p.nama_produk, p.kode_produk, k.nama_kategori,
-		       b.kode_batch, p.pola_penggunaan, sk.jumlah_kemasan_dipakai, sk.jumlah_isi_dipakai,
+		       b.kode_batch, p.pola_penggunaan, p.satuan_isi, sk.jumlah_kemasan_dipakai, sk.jumlah_isi_dipakai,
 		       COALESCE(sk.keterangan,'')
 		FROM stok_keluar sk
 		JOIN produk p ON p.id = sk.id_produk
@@ -111,7 +111,7 @@ func (r *laporanRepository) GetStokKeluar(ctx context.Context, filter model.Lapo
 		var item model.LaporanStokKeluarItem
 		var tgl time.Time
 		if err := rows.Scan(&item.ID, &tgl, &item.NamaProduk, &item.KodeProduk, &item.NamaKategori,
-			&item.KodeBatch, &item.PolaPenggunaan, &item.JumlahKemasanDipakai, &item.JumlahIsiDipakai, &item.Keterangan); err != nil {
+			&item.KodeBatch, &item.PolaPenggunaan, &item.SatuanIsi, &item.JumlahKemasanDipakai, &item.JumlahIsiDipakai, &item.Keterangan); err != nil {
 			return nil, err
 		}
 		item.TanggalPenggunaan = tgl.Format("2006-01-02")
@@ -125,7 +125,7 @@ func (r *laporanRepository) GetStokKeluar(ctx context.Context, filter model.Lapo
 
 func (r *laporanRepository) GetSisaStok(ctx context.Context, filter model.LaporanFilter) ([]model.LaporanSisaStokItem, error) {
 	query := `
-		SELECT p.kode_produk, p.nama_produk, k.nama_kategori, p.pola_penggunaan,
+		SELECT p.kode_produk, p.nama_produk, k.nama_kategori, p.pola_penggunaan, p.satuan_isi,
 		       COALESCE(SUM(b.stok_kemasan) FILTER (WHERE b.status = 'AKTIF'), 0)::int AS total_stok,
 		       COALESCE(SUM(b.total_isi_tersedia) FILTER (WHERE b.status = 'AKTIF'), 0)::float8 AS total_isi
 		FROM produk p
@@ -157,7 +157,7 @@ func (r *laporanRepository) GetSisaStok(ctx context.Context, filter model.Lapora
 	for rows.Next() {
 		var item model.LaporanSisaStokItem
 		if err := rows.Scan(&item.KodeProduk, &item.NamaProduk, &item.NamaKategori,
-			&item.PolaPenggunaan, &item.TotalStok, &item.TotalIsi); err != nil {
+			&item.PolaPenggunaan, &item.SatuanIsi, &item.TotalStok, &item.TotalIsi); err != nil {
 			return nil, err
 		}
 		result = append(result, item)

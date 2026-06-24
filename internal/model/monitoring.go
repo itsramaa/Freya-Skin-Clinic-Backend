@@ -32,6 +32,7 @@ type MonitoringProdukItem struct {
 	IDKategori     string                `json:"id_kategori"`
 	NamaKategori   string                `json:"nama_kategori"`
 	PolaPenggunaan string                `json:"pola_penggunaan"`
+	SatuanIsi      string                `json:"satuan_isi"`
 	TotalStok      int                   `json:"total_stok"`
 	TotalIsi       float64               `json:"total_isi"`
 	Batches        []MonitoringBatchItem `json:"batches"`

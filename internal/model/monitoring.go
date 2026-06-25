@@ -39,10 +39,10 @@ type MonitoringProdukItem struct {
 }
 
 type MonitoringFilter struct {
-	KategoriID  string
-	StatusBatch string
-	StatusBUD   string
-	NamaProduk  string
+	KategoriID       string
+	IndikatorExpired string
+	StatusBUD        string
+	NamaProduk       string
 }
 
 // Background worker models

@@ -16,6 +16,7 @@ var ErrKemasanTerbukaNotFound = errors.New("kemasan terbuka tidak ditemukan")
 type KemasanTerbukaRepository interface {
 	FindAktifByBatch(ctx context.Context, idBatch string) (*model.KemasanTerbuka, error)
 	Create(ctx context.Context, kt *model.KemasanTerbuka) error
+	Upsert(ctx context.Context, kt *model.KemasanTerbuka) error
 	UpdateIsiTersisa(ctx context.Context, id string, isiTersisa float64) error
 	UpdateStatus(ctx context.Context, id, status string) error
 	FindExpiredBUD(ctx context.Context) ([]model.KemasanTerbuka, error)
@@ -50,6 +51,26 @@ func (r *kemasanTerbukaRepository) Create(ctx context.Context, kt *model.Kemasan
 	query := `
 		INSERT INTO kemasan_terbuka (id_batch, tanggal_dibuka, bud, isi_awal, isi_tersisa, status_bud)
 		VALUES ($1, $2, $3, $4, $5, 'AKTIF')
+		RETURNING id, created_at, updated_at
+	`
+	return r.db.QueryRow(ctx, query,
+		kt.IDBatch, kt.TanggalDibuka, kt.BUD, kt.IsiAwal, kt.IsiTersisa,
+	).Scan(&kt.ID, &kt.CreatedAt, &kt.UpdatedAt)
+}
+
+func (r *kemasanTerbukaRepository) Upsert(ctx context.Context, kt *model.KemasanTerbuka) error {
+	// Gunakan ON CONFLICT untuk handle UNIQUE(id_batch):
+	// Jika record sudah ada (kemasan sebelumnya KADALUWARSA), aktifkan ulang dengan data baru.
+	query := `
+		INSERT INTO kemasan_terbuka (id_batch, tanggal_dibuka, bud, isi_awal, isi_tersisa, status_bud)
+		VALUES ($1, $2, $3, $4, $5, 'AKTIF')
+		ON CONFLICT (id_batch) DO UPDATE SET
+			tanggal_dibuka = EXCLUDED.tanggal_dibuka,
+			bud            = EXCLUDED.bud,
+			isi_awal       = EXCLUDED.isi_awal,
+			isi_tersisa    = EXCLUDED.isi_tersisa,
+			status_bud     = 'AKTIF',
+			updated_at     = NOW()
 		RETURNING id, created_at, updated_at
 	`
 	return r.db.QueryRow(ctx, query,

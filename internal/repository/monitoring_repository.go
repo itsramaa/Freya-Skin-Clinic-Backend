@@ -33,7 +33,7 @@ func (r *monitoringRepository) FindAllForMonitoring(ctx context.Context, filter 
 		FROM batch_stok b
 		JOIN produk p ON p.id = b.id_produk
 		JOIN kategori k ON k.id = p.id_kategori
-		WHERE 1=1
+		WHERE b.status = 'AKTIF'
 	`
 	args := []interface{}{}
 	idx := 1
@@ -41,11 +41,6 @@ func (r *monitoringRepository) FindAllForMonitoring(ctx context.Context, filter 
 	if filter.KategoriID != "" {
 		query += ` AND p.id_kategori = $` + itoa(idx)
 		args = append(args, filter.KategoriID)
-		idx++
-	}
-	if filter.StatusBatch != "" {
-		query += ` AND b.status = $` + itoa(idx)
-		args = append(args, filter.StatusBatch)
 		idx++
 	}
 	if filter.NamaProduk != "" {
@@ -132,7 +127,7 @@ func (r *monitoringRepository) FindAllForMonitoring(ctx context.Context, filter 
 			ktQuery := `
 				SELECT id, tanggal_dibuka, bud, isi_awal, isi_tersisa, status_bud
 				FROM kemasan_terbuka
-				WHERE id_batch = $1
+				WHERE id_batch = $1 AND status_bud = 'AKTIF'
 				LIMIT 1
 			`
 			var ktID, ktStatus string
@@ -158,7 +153,21 @@ func (r *monitoringRepository) FindAllForMonitoring(ctx context.Context, filter 
 
 	result := make([]model.MonitoringProdukItem, 0, len(produkOrder))
 	for _, pID := range produkOrder {
-		result = append(result, *produkMap[pID])
+		item := *produkMap[pID]
+		// Post-filter IndikatorExpired: filter batch yang tidak sesuai indikator
+		if filter.IndikatorExpired != "" {
+			filtered := item.Batches[:0]
+			for _, b := range item.Batches {
+				if b.IndikatorExpired == filter.IndikatorExpired {
+					filtered = append(filtered, b)
+				}
+			}
+			item.Batches = filtered
+			if len(item.Batches) == 0 {
+				continue
+			}
+		}
+		result = append(result, item)
 	}
 	return result, nil
 }

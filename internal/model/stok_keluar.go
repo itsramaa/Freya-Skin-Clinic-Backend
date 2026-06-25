@@ -55,6 +55,7 @@ type PreviewBatchResponse struct {
 	ExpiredDate      string              `json:"expired_date"`
 	StokKemasan      int                 `json:"stok_kemasan"`
 	TotalIsiTersedia float64             `json:"total_isi_tersedia"`
+	TotalStokSemua   int                 `json:"total_stok_semua"`
 	PolaPenggunaan   string              `json:"pola_penggunaan"`
 	SatuanIsi        string              `json:"satuan_isi"`
 	IsiPerKemasan    *float64            `json:"isi_per_kemasan"`

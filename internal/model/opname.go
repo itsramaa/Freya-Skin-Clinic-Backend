@@ -45,6 +45,7 @@ type OpnameItemResponse struct {
 	IDKemasanTerbuka   *string  `json:"id_kemasan_terbuka"`
 	IsiTersisa         *float64 `json:"isi_tersisa"`
 	StokSistem         float64  `json:"stok_sistem"`
+	StokKemasanSistem  *float64 `json:"stok_kemasan_sistem"`
 	StokFisik          *float64 `json:"stok_fisik"`
 	Selisih            *float64 `json:"selisih"`
 	Keterangan         string   `json:"keterangan"`

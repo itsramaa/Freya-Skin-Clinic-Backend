@@ -14,7 +14,7 @@ type StokMasukRepository interface {
 	FindAll(ctx context.Context) ([]model.StokMasukResponse, error)
 	CheckBatchUsed(ctx context.Context, idBatch string) (bool, error)
 	FindByID(ctx context.Context, id string) (*model.StokMasuk, error)
-	Update(ctx context.Context, id string, req model.UpdateStokMasukRequest, deltaKemasan int, deltaIsi float64) error
+	Update(ctx context.Context, id string, req model.UpdateStokMasukRequest, deltaKemasan int, deltaIsi float64, expiredDate time.Time) error
 	Delete(ctx context.Context, id string, idBatch string) error
 }
 
@@ -108,7 +108,7 @@ func (r *stokMasukRepository) FindByID(ctx context.Context, id string) (*model.S
 	return &sm, nil
 }
 
-func (r *stokMasukRepository) Update(ctx context.Context, id string, req model.UpdateStokMasukRequest, deltaKemasan int, deltaIsi float64) error {
+func (r *stokMasukRepository) Update(ctx context.Context, id string, req model.UpdateStokMasukRequest, deltaKemasan int, deltaIsi float64, expiredDate time.Time) error {
 	tgl, err := time.Parse("2006-01-02", req.TanggalPenerimaan)
 	if err != nil {
 		return err
@@ -129,11 +129,12 @@ func (r *stokMasukRepository) Update(ctx context.Context, id string, req model.U
 		return err
 	}
 
-	// Update batch_stok sesuai delta
+	// Update batch_stok: stok delta + expired_date baru
 	_, err = tx.Exec(ctx,
-		`UPDATE batch_stok SET stok_kemasan=stok_kemasan+$1, total_isi_tersedia=total_isi_tersedia+$2, updated_at=NOW()
-		 WHERE id=(SELECT id_batch FROM stok_masuk WHERE id=$3)`,
-		deltaKemasan, deltaIsi, id,
+		`UPDATE batch_stok SET stok_kemasan=stok_kemasan+$1, total_isi_tersedia=total_isi_tersedia+$2,
+		 expired_date=$3, updated_at=NOW()
+		 WHERE id=(SELECT id_batch FROM stok_masuk WHERE id=$4)`,
+		deltaKemasan, deltaIsi, expiredDate, id,
 	)
 	if err != nil {
 		return err

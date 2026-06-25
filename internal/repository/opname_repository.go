@@ -21,6 +21,7 @@ type OpnameRepository interface {
 	FindAktif(ctx context.Context) (*model.StokOpname, error)
 	UpdateStatus(ctx context.Context, id, status string) error
 	GetItemsForOpname(ctx context.Context) ([]model.OpnameItemResponse, error)
+	GetDetailItems(ctx context.Context, idOpname string) ([]model.OpnameItemResponse, error)
 	SaveDetailAndAdjust(ctx context.Context, idOpname string, details []model.DetailOpnameInput) error
 }
 
@@ -101,7 +102,8 @@ func (r *opnameRepository) GetItemsForOpname(ctx context.Context) ([]model.Opnam
 		SELECT b.id, b.kode_batch, p.nama_produk, b.expired_date,
 		       p.pola_penggunaan, p.satuan_isi,
 		       NULL::UUID AS id_kemasan_terbuka, NULL::DECIMAL AS isi_tersisa,
-		       b.stok_kemasan::DECIMAL AS stok_sistem
+		       b.stok_kemasan::DECIMAL AS stok_sistem,
+		       NULL::DECIMAL AS stok_kemasan_sistem
 		FROM batch_stok b
 		JOIN produk p ON p.id = b.id_produk
 		WHERE b.status = 'AKTIF' AND b.stok_kemasan > 0
@@ -111,7 +113,8 @@ func (r *opnameRepository) GetItemsForOpname(ctx context.Context) ([]model.Opnam
 		SELECT b.id, b.kode_batch, p.nama_produk, b.expired_date,
 		       p.pola_penggunaan, p.satuan_isi,
 		       kt.id, kt.isi_tersisa,
-		       kt.isi_tersisa AS stok_sistem
+		       kt.isi_tersisa AS stok_sistem,
+		       b.stok_kemasan::DECIMAL AS stok_kemasan_sistem
 		FROM kemasan_terbuka kt
 		JOIN batch_stok b ON b.id = kt.id_batch
 		JOIN produk p ON p.id = b.id_produk
@@ -133,10 +136,56 @@ func (r *opnameRepository) GetItemsForOpname(ctx context.Context) ([]model.Opnam
 			&item.IDBatch, &item.KodeBatch, &item.NamaProduk, &exp,
 			&item.PolaPenggunaan, &item.SatuanIsi,
 			&item.IDKemasanTerbuka, &item.IsiTersisa, &item.StokSistem,
+			&item.StokKemasanSistem,
 		); err != nil {
 			return nil, err
 		}
 		item.ExpiredDate = exp.Format("2006-01-02")
+		result = append(result, item)
+	}
+	if result == nil {
+		result = []model.OpnameItemResponse{}
+	}
+	return result, nil
+}
+
+func (r *opnameRepository) GetDetailItems(ctx context.Context, idOpname string) ([]model.OpnameItemResponse, error) {
+	// Baca dari detail_opname (histori audit) — dipakai untuk opname SELESAI/DIBATALKAN
+	query := `
+		SELECT d.id_batch, b.kode_batch, p.nama_produk, b.expired_date,
+		       p.pola_penggunaan, p.satuan_isi,
+		       d.id_kemasan_terbuka, NULL::DECIMAL AS isi_tersisa,
+		       d.stok_sistem, d.stok_fisik, d.selisih, COALESCE(d.keterangan, '')
+		FROM detail_opname d
+		JOIN batch_stok b ON b.id = d.id_batch
+		JOIN produk p ON p.id = b.id_produk
+		WHERE d.id_opname = $1
+		ORDER BY p.nama_produk, b.expired_date
+	`
+	rows, err := r.db.Query(ctx, query, idOpname)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []model.OpnameItemResponse
+	for rows.Next() {
+		var item model.OpnameItemResponse
+		var exp time.Time
+		var stokFisik, selisih float64
+		var keterangan string
+		if err := rows.Scan(
+			&item.IDBatch, &item.KodeBatch, &item.NamaProduk, &exp,
+			&item.PolaPenggunaan, &item.SatuanIsi,
+			&item.IDKemasanTerbuka, &item.IsiTersisa,
+			&item.StokSistem, &stokFisik, &selisih, &keterangan,
+		); err != nil {
+			return nil, err
+		}
+		item.ExpiredDate = exp.Format("2006-01-02")
+		item.StokFisik = &stokFisik
+		item.Selisih = &selisih
+		item.Keterangan = keterangan
 		result = append(result, item)
 	}
 	if result == nil {
@@ -191,7 +240,8 @@ func (r *opnameRepository) SaveDetailAndAdjust(ctx context.Context, idOpname str
 				}
 				_, err = tx.Exec(ctx, `UPDATE kemasan_terbuka SET isi_tersisa = $1, updated_at = NOW() WHERE id = $2`, sisaIsi, *d.IDKemasanTerbuka)
 			} else {
-				_, err = tx.Exec(ctx, `UPDATE batch_stok SET stok_kemasan = $1, updated_at = NOW() WHERE id = $2`, int(d.StokFisik), d.IDBatch)
+				// Full Use: update stok_kemasan dan total_isi_tersedia sekaligus
+				_, err = tx.Exec(ctx, `UPDATE batch_stok SET stok_kemasan = $1, total_isi_tersedia = $1, updated_at = NOW() WHERE id = $2`, int(d.StokFisik), d.IDBatch)
 			}
 			if err != nil {
 				return err

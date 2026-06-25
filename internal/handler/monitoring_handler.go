@@ -20,10 +20,10 @@ func NewMonitoringHandler(svc service.MonitoringService) *MonitoringHandler {
 
 func (h *MonitoringHandler) GetAll(c *fiber.Ctx) error {
 	filter := model.MonitoringFilter{
-		KategoriID:  c.Query("kategori_id"),
-		StatusBatch: c.Query("status_batch"),
-		StatusBUD:   c.Query("status_bud"),
-		NamaProduk:  c.Query("nama_produk"),
+		KategoriID:       c.Query("kategori_id"),
+		IndikatorExpired: c.Query("indikator_expired"),
+		StatusBUD:        c.Query("status_bud"),
+		NamaProduk:       c.Query("nama_produk"),
 	}
 
 	data, err := h.svc.GetAll(c.Context(), filter)

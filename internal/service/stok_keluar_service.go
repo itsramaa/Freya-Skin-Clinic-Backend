@@ -73,12 +73,23 @@ func (s *stokKeluarService) GetPreviewBatch(ctx context.Context, idProduk string
 		return nil, ErrTidakAdaBatch
 	}
 
+	// Hitung total stok semua batch aktif
+	allBatches, err := s.batchFEFORepo.FindAllBatchFEFO(ctx, idProduk)
+	if err != nil {
+		return nil, err
+	}
+	var totalStokSemua int
+	for _, b := range allBatches {
+		totalStokSemua += b.StokKemasan
+	}
+
 	preview := &model.PreviewBatchResponse{
 		IDBatch:          batch.ID,
 		KodeBatch:        batch.KodeBatch,
 		ExpiredDate:      batch.ExpiredDate.Format("2006-01-02"),
 		StokKemasan:      batch.StokKemasan,
 		TotalIsiTersedia: batch.TotalIsiTersedia,
+		TotalStokSemua:   totalStokSemua,
 		PolaPenggunaan:   produk.PolaPenggunaan,
 		SatuanIsi:        produk.SatuanIsi,
 		IsiPerKemasan:    produk.IsiPerKemasan,
@@ -275,7 +286,7 @@ func (s *stokKeluarService) Create(ctx context.Context, req model.StokKeluarRequ
 			IsiTersisa:    isiPerKemasan - req.JumlahIsiDipakai,
 			StatusBUD:     "AKTIF",
 		}
-		if err := s.kemasanRepo.Create(ctx, newKT); err != nil {
+		if err := s.kemasanRepo.Upsert(ctx, newKT); err != nil {
 			return nil, err
 		}
 		idKemasan = &newKT.ID

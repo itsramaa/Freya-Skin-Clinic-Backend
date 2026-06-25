@@ -18,6 +18,7 @@ type OpnameRepository interface {
 	Create(ctx context.Context, op *model.StokOpname) error
 	FindAll(ctx context.Context) ([]model.StokOpnameResponse, error)
 	FindByID(ctx context.Context, id string) (*model.StokOpname, error)
+	FindAktif(ctx context.Context) (*model.StokOpname, error)
 	UpdateStatus(ctx context.Context, id, status string) error
 	GetItemsForOpname(ctx context.Context) ([]model.OpnameItemResponse, error)
 	SaveDetailAndAdjust(ctx context.Context, idOpname string, details []model.DetailOpnameInput) error
@@ -34,6 +35,24 @@ func NewOpnameRepository(db *pgxpool.Pool) OpnameRepository {
 func (r *opnameRepository) Create(ctx context.Context, op *model.StokOpname) error {
 	query := `INSERT INTO stok_opname (id_user, tanggal_opname, status) VALUES ($1, $2, 'AKTIF') RETURNING id, created_at, updated_at`
 	return r.db.QueryRow(ctx, query, op.IDUser, op.TanggalOpname).Scan(&op.ID, &op.CreatedAt, &op.UpdatedAt)
+}
+
+func (r *opnameRepository) FindAktif(ctx context.Context) (*model.StokOpname, error) {
+	query := `SELECT id, id_user, tanggal_opname, status, COALESCE(catatan,''), created_at, updated_at FROM stok_opname WHERE status = 'AKTIF' ORDER BY created_at DESC LIMIT 1`
+	var op model.StokOpname
+	var tgl, created, updated time.Time
+	var catatan string
+	err := r.db.QueryRow(ctx, query).Scan(&op.ID, &op.IDUser, &tgl, &op.Status, &catatan, &created, &updated)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	op.TanggalOpname = tgl
+	op.CreatedAt = created
+	op.UpdatedAt = updated
+	return &op, nil
 }
 
 func (r *opnameRepository) FindAll(ctx context.Context) ([]model.StokOpnameResponse, error) {

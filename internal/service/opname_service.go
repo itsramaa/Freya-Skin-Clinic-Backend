@@ -31,6 +31,22 @@ func NewOpnameService(repo repository.OpnameRepository) OpnameService {
 }
 
 func (s *opnameService) MulaiOpname(ctx context.Context, userID string) (*model.StokOpnameResponse, error) {
+	// Cek sesi aktif — auto-batalkan jika sudah lebih dari 24 jam (JWT expired)
+	existing, err := s.repo.FindAktif(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		// Jika sesi aktif masih dalam 24 jam terakhir, tolak pembuatan sesi baru
+		if time.Since(existing.CreatedAt) < 24*time.Hour {
+			return nil, ErrOpnameAktifSudahAda
+		}
+		// Sesi lama sudah lebih dari 24 jam (JWT expired) — auto-batalkan
+		if err := s.repo.UpdateStatus(ctx, existing.ID, "DIBATALKAN"); err != nil {
+			return nil, err
+		}
+	}
+
 	op := &model.StokOpname{
 		IDUser:        userID,
 		TanggalOpname: time.Now().Truncate(24 * time.Hour),

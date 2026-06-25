@@ -13,6 +13,7 @@ import (
 type BatchFEFORepository interface {
 	FindBatchPrioritasFEFO(ctx context.Context, idProduk string) (*model.BatchStok, error)
 	FindBatchPartialUseFEFO(ctx context.Context, idProduk string) (*model.BatchStok, error)
+	FindAllBatchFEFO(ctx context.Context, idProduk string) ([]model.BatchStok, error)
 	ReduceStok(ctx context.Context, id string, kurangiKemasan int, kurangiIsi float64) error
 }
 
@@ -74,6 +75,34 @@ func (r *batchFEFORepository) FindBatchPartialUseFEFO(ctx context.Context, idPro
 
 	// Prioritas 2: batch dengan stok kemasan > 0
 	return r.FindBatchPrioritasFEFO(ctx, idProduk)
+}
+
+// FindAllBatchFEFO — untuk batch splitting Full Use: ambil semua batch AKTIF dengan stok_kemasan > 0, expired ASC
+func (r *batchFEFORepository) FindAllBatchFEFO(ctx context.Context, idProduk string) ([]model.BatchStok, error) {
+	query := `
+		SELECT id, id_produk, kode_batch, expired_date, stok_kemasan, total_isi_tersedia, status, created_at, updated_at
+		FROM batch_stok
+		WHERE id_produk = $1 AND status = 'AKTIF' AND stok_kemasan > 0
+		ORDER BY expired_date ASC
+	`
+	rows, err := r.db.Query(ctx, query, idProduk)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var batches []model.BatchStok
+	for rows.Next() {
+		var b model.BatchStok
+		if err := rows.Scan(
+			&b.ID, &b.IDProduk, &b.KodeBatch, &b.ExpiredDate,
+			&b.StokKemasan, &b.TotalIsiTersedia, &b.Status, &b.CreatedAt, &b.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		batches = append(batches, b)
+	}
+	return batches, rows.Err()
 }
 
 func (r *batchFEFORepository) ReduceStok(ctx context.Context, id string, kurangiKemasan int, kurangiIsi float64) error {

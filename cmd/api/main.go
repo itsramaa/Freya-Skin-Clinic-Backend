@@ -57,18 +57,18 @@ func main() {
 	stokMasukSvc := service.NewStokMasukService(stokMasukRepo, batchRepo, produkRepo)
 	stokMasukHandler := handler.NewStokMasukHandler(stokMasukSvc)
 
+	opnameRepo := repository.NewOpnameRepository(db)
+	opnameSvc := service.NewOpnameService(opnameRepo)
+	opnameHandler := handler.NewOpnameHandler(opnameSvc)
+
 	kemasanRepo := repository.NewKemasanTerbukaRepository(db)
 	stokKeluarRepo := repository.NewStokKeluarRepository(db)
-	stokKeluarSvc := service.NewStokKeluarService(stokKeluarRepo, batchRepo, batchFEFORepo, kemasanRepo, produkRepo)
+	stokKeluarSvc := service.NewStokKeluarService(stokKeluarRepo, batchRepo, batchFEFORepo, kemasanRepo, produkRepo, opnameRepo)
 	stokKeluarHandler := handler.NewStokKeluarHandler(stokKeluarSvc)
 
 	monitoringRepo := repository.NewMonitoringRepository(db)
 	monitoringSvc := service.NewMonitoringService(monitoringRepo)
 	monitoringHandler := handler.NewMonitoringHandler(monitoringSvc)
-
-	opnameRepo := repository.NewOpnameRepository(db)
-	opnameSvc := service.NewOpnameService(opnameRepo)
-	opnameHandler := handler.NewOpnameHandler(opnameSvc)
 
 	laporanRepo := repository.NewLaporanRepository(db)
 	laporanSvc := service.NewLaporanService(laporanRepo)

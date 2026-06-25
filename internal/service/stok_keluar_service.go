@@ -14,6 +14,7 @@ var (
 	ErrTidakAdaBatch           = errors.New("Tidak ada stok aktif untuk produk ini.")
 	ErrIsiDipakaiMelebihiSisa  = errors.New("Jumlah isi yang dipakai melebihi sisa isi kemasan terbuka.")
 	ErrIsiPerKemasanTidakDiset = errors.New("Produk tidak memiliki konfigurasi isi per kemasan.")
+	ErrOpnameSedangBerlangsung = errors.New("Transaksi stok keluar tidak dapat dilakukan karena sesi stok opname sedang berlangsung.")
 )
 
 type StokKeluarService interface {
@@ -28,6 +29,7 @@ type stokKeluarService struct {
 	batchFEFORepo  repository.BatchFEFORepository
 	kemasanRepo    repository.KemasanTerbukaRepository
 	produkRepo     repository.ProdukRepository
+	opnameRepo     repository.OpnameRepository
 }
 
 func NewStokKeluarService(
@@ -36,6 +38,7 @@ func NewStokKeluarService(
 	batchFEFORepo repository.BatchFEFORepository,
 	kemasanRepo repository.KemasanTerbukaRepository,
 	produkRepo repository.ProdukRepository,
+	opnameRepo repository.OpnameRepository,
 ) StokKeluarService {
 	return &stokKeluarService{
 		stokKeluarRepo: stokKeluarRepo,
@@ -43,6 +46,7 @@ func NewStokKeluarService(
 		batchFEFORepo:  batchFEFORepo,
 		kemasanRepo:    kemasanRepo,
 		produkRepo:     produkRepo,
+		opnameRepo:     opnameRepo,
 	}
 }
 
@@ -99,6 +103,15 @@ func (s *stokKeluarService) GetPreviewBatch(ctx context.Context, idProduk string
 }
 
 func (s *stokKeluarService) Create(ctx context.Context, req model.StokKeluarRequest, userID string) (*model.StokKeluarResponse, error) {
+	// Guard: cek apakah ada sesi opname aktif — kunci transaksi stok keluar
+	opnameAktif, err := s.opnameRepo.FindAktif(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if opnameAktif != nil {
+		return nil, ErrOpnameSedangBerlangsung
+	}
+
 	tglPenggunaan, err := time.Parse("2006-01-02", req.TanggalPenggunaan)
 	if err != nil {
 		return nil, errors.New("Format tanggal tidak valid (YYYY-MM-DD)")
@@ -121,27 +134,48 @@ func (s *stokKeluarService) Create(ctx context.Context, req model.StokKeluarRequ
 			return nil, errors.New("Jumlah kemasan dipakai harus lebih dari 0.")
 		}
 
-		batch, err := s.batchFEFORepo.FindBatchPrioritasFEFO(ctx, req.IDProduk)
+		// Ambil semua batch AKTIF sesuai FEFO untuk batch splitting
+		allBatches, err := s.batchFEFORepo.FindAllBatchFEFO(ctx, req.IDProduk)
 		if err != nil {
 			return nil, err
 		}
-		if batch == nil {
+		if len(allBatches) == 0 {
 			return nil, ErrTidakAdaBatch
 		}
-		if batch.StokKemasan < req.JumlahKemasanDipakai {
+
+		// Hitung total stok seluruh batch
+		var totalStok int
+		for _, b := range allBatches {
+			totalStok += b.StokKemasan
+		}
+		if totalStok < req.JumlahKemasanDipakai {
 			return nil, ErrStokKurang
 		}
 
-		// Full Use: total isi = jumlah kemasan (tidak dikali isi_per_kemasan)
-		totalIsi := float64(req.JumlahKemasanDipakai)
-
-		if err := s.batchFEFORepo.ReduceStok(ctx, batch.ID, req.JumlahKemasanDipakai, totalIsi); err != nil {
-			return nil, err
+		// Batch splitting: kurangi dari batch prioritas FEFO satu per satu
+		sisaHarusDiambil := req.JumlahKemasanDipakai
+		var firstBatch model.BatchStok
+		for i, b := range allBatches {
+			if sisaHarusDiambil <= 0 {
+				break
+			}
+			ambil := b.StokKemasan
+			if ambil > sisaHarusDiambil {
+				ambil = sisaHarusDiambil
+			}
+			totalIsi := float64(ambil)
+			if err := s.batchFEFORepo.ReduceStok(ctx, b.ID, ambil, totalIsi); err != nil {
+				return nil, err
+			}
+			sisaHarusDiambil -= ambil
+			if i == 0 {
+				firstBatch = b
+			}
 		}
 
-		sk.IDBatch = batch.ID
+		sk.IDBatch = firstBatch.ID
 		sk.JumlahKemasanDipakai = req.JumlahKemasanDipakai
-		sk.JumlahIsiDipakai = totalIsi
+		sk.JumlahIsiDipakai = float64(req.JumlahKemasanDipakai)
 
 		if err := s.stokKeluarRepo.Create(ctx, sk); err != nil {
 			return nil, err
@@ -151,7 +185,7 @@ func (s *stokKeluarService) Create(ctx context.Context, req model.StokKeluarRequ
 			ID:                   sk.ID,
 			IDProduk:             req.IDProduk,
 			NamaProduk:           produk.NamaProduk,
-			KodeBatch:            batch.KodeBatch,
+			KodeBatch:            firstBatch.KodeBatch,
 			PolaPenggunaan:       produk.PolaPenggunaan,
 			SatuanIsi:            produk.SatuanIsi,
 			TanggalPenggunaan:    tglPenggunaan.Format("2006-01-02"),

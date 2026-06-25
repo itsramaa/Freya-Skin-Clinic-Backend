@@ -36,7 +36,6 @@ type StokMasukRequest struct {
 
 type UpdateStokMasukRequest struct {
 	TanggalPenerimaan string `json:"tanggal_penerimaan" validate:"required"`
-	ExpiredDate       string `json:"expired_date" validate:"required"`
 	JumlahKemasan     int    `json:"jumlah_kemasan" validate:"required,min=1"`
 	Keterangan        string `json:"keterangan"`
 }

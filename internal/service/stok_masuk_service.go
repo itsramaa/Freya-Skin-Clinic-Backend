@@ -155,14 +155,6 @@ func (s *stokMasukService) Update(ctx context.Context, id string, req model.Upda
 		return ErrStokMasukTanggalFuture
 	}
 
-	expiredDate, err := time.Parse("2006-01-02", req.ExpiredDate)
-	if err != nil {
-		return errors.New("Format expired date tidak valid (YYYY-MM-DD)")
-	}
-	if !expiredDate.After(tglPenerimaan) {
-		return ErrStokMasukExpiredTooEarly
-	}
-
 	deltaKemasan := req.JumlahKemasan - existing.JumlahKemasan
 
 	// Jika delta negatif (pengurangan), cek apakah stok batch akan menjadi negatif.
@@ -190,7 +182,7 @@ func (s *stokMasukService) Update(ctx context.Context, id string, req model.Upda
 		deltaIsi = float64(deltaKemasan)
 	}
 
-	return s.stokMasukRepo.Update(ctx, id, req, deltaKemasan, deltaIsi, expiredDate)
+	return s.stokMasukRepo.Update(ctx, id, req, deltaKemasan, deltaIsi)
 }
 
 func (s *stokMasukService) Delete(ctx context.Context, id string) error {

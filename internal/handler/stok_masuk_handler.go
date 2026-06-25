@@ -72,9 +72,6 @@ func (h *StokMasukHandler) Update(c *fiber.Ctx) error {
 	if req.TanggalPenerimaan == "" {
 		return response.Error(c, http.StatusBadRequest, "Tanggal penerimaan wajib diisi.", nil)
 	}
-	if req.ExpiredDate == "" {
-		return response.Error(c, http.StatusBadRequest, "Tanggal kedaluwarsa wajib diisi.", nil)
-	}
 	if req.JumlahKemasan <= 0 {
 		return response.Error(c, http.StatusBadRequest, "Jumlah kemasan harus lebih dari 0.", nil)
 	}
@@ -88,8 +85,6 @@ func (h *StokMasukHandler) Update(c *fiber.Ctx) error {
 			return response.Error(c, http.StatusBadRequest, "Perubahan tidak dapat dilakukan karena stok batch akan menjadi negatif.", nil)
 		case errors.Is(err, service.ErrStokMasukTanggalFuture):
 			return response.Error(c, http.StatusBadRequest, "Tanggal penerimaan tidak boleh melebihi tanggal hari ini.", nil)
-		case errors.Is(err, service.ErrStokMasukExpiredTooEarly):
-			return response.Error(c, http.StatusBadRequest, "Tanggal kedaluwarsa harus setelah tanggal penerimaan.", nil)
 		case errors.Is(err, service.ErrProdukKategoriNotFound):
 			return response.Error(c, http.StatusNotFound, "Produk tidak ditemukan.", nil)
 		default:

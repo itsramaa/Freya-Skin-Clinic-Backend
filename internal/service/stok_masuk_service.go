@@ -143,6 +143,15 @@ func (s *stokMasukService) Update(ctx context.Context, id string, req model.Upda
 		return errors.New("Data stok masuk tidak ditemukan.")
 	}
 
+	// Blokir edit jika batch sudah digunakan dalam transaksi stok keluar
+	used, err := s.stokMasukRepo.CheckBatchUsed(ctx, existing.IDBatch)
+	if err != nil {
+		return err
+	}
+	if used {
+		return ErrBatchSudahDigunakan
+	}
+
 	if req.JumlahKemasan <= 0 {
 		return errors.New("Jumlah kemasan harus lebih dari 0.")
 	}

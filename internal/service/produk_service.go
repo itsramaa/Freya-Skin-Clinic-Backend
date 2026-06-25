@@ -9,12 +9,13 @@ import (
 )
 
 var (
-	ErrProdukDataTidakLengkap      = errors.New("Data produk tidak lengkap")
+	ErrProdukDataTidakLengkap        = errors.New("Data produk tidak lengkap")
 	ErrProdukIsiPerKemasanDiperlukan = errors.New("Isi per kemasan wajib diisi untuk produk Partial Use")
-	ErrProdukKategoriNotFound      = errors.New("Kategori tidak ditemukan")
-	ErrProdukStokAktif             = errors.New("Produk tidak dapat dihapus karena masih memiliki stok aktif.")
-	ErrProdukHasTransaksi          = errors.New("Produk tidak dapat dihapus karena memiliki riwayat transaksi.")
-	ErrProdukPolaPenggunaanLocked  = errors.New("Pola penggunaan tidak dapat diubah karena produk sudah memiliki transaksi.")
+	ErrProdukKategoriNotFound        = errors.New("Kategori tidak ditemukan")
+	ErrProdukStokAktif               = errors.New("Produk tidak dapat dihapus karena masih memiliki stok aktif.")
+	ErrProdukHasTransaksi            = errors.New("Produk tidak dapat dihapus karena memiliki riwayat transaksi.")
+	ErrProdukPolaPenggunaanLocked    = errors.New("Pola penggunaan tidak dapat diubah karena produk sudah memiliki transaksi.")
+	ErrProdukEditLocked              = errors.New("Produk tidak dapat diubah karena sudah memiliki riwayat transaksi masuk atau keluar.")
 )
 
 type ProdukService interface {
@@ -81,21 +82,21 @@ func (s *produkService) Update(ctx context.Context, id string, req model.UpdateP
 		return nil, err
 	}
 
-	// Lock pola_penggunaan jika ada transaksi
-	if req.PolaPenggunaan != current.PolaPenggunaan {
-		hasTransaksi, err := s.produkRepo.HasTransaksi(ctx, id)
-		if err != nil {
-			return nil, err
-		}
-		if hasTransaksi {
-			return nil, ErrProdukPolaPenggunaanLocked
-		}
+	// Blokir seluruh edit jika produk sudah punya transaksi masuk/keluar
+	hasTransaksi, err := s.produkRepo.HasTransaksi(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if hasTransaksi {
+		return nil, ErrProdukEditLocked
 	}
 
 	// Validasi isi_per_kemasan
 	if req.PolaPenggunaan == "PARTIAL_USE" && (req.IsiPerKemasan == nil || *req.IsiPerKemasan <= 0) {
 		return nil, ErrProdukIsiPerKemasanDiperlukan
 	}
+
+	_ = current // current masih digunakan untuk referensi jika diperlukan di masa depan
 
 	if err := s.produkRepo.Update(ctx, id, req); err != nil {
 		return nil, err

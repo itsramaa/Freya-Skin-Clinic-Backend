@@ -76,6 +76,8 @@ func (h *ProdukHandler) Update(c *fiber.Ctx) error {
 		switch {
 		case errors.Is(err, repository.ErrProdukNotFound):
 			return response.Error(c, http.StatusNotFound, "Produk tidak ditemukan.", nil)
+		case errors.Is(err, service.ErrProdukEditLocked):
+			return response.Error(c, http.StatusConflict, "Produk tidak dapat diubah karena sudah memiliki riwayat transaksi masuk atau keluar.", nil)
 		case errors.Is(err, service.ErrProdukPolaPenggunaanLocked):
 			return response.Error(c, http.StatusConflict, "Pola penggunaan tidak dapat diubah karena produk sudah memiliki riwayat transaksi.", nil)
 		case errors.Is(err, service.ErrProdukIsiPerKemasanDiperlukan):

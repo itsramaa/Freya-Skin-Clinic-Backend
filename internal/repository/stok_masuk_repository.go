@@ -44,7 +44,8 @@ func (r *stokMasukRepository) FindAll(ctx context.Context) ([]model.StokMasukRes
 		       p.pola_penggunaan, p.satuan_isi, p.isi_per_kemasan,
 		       b.kode_batch, sm.tanggal_penerimaan, b.expired_date,
 		       sm.jumlah_kemasan, sm.total_isi_masuk,
-		       COALESCE(sm.keterangan, ''), sm.created_at
+		       COALESCE(sm.keterangan, ''), sm.created_at,
+		       EXISTS (SELECT 1 FROM stok_keluar sk WHERE sk.id_batch = sm.id_batch) AS batch_digunakan
 		FROM stok_masuk sm
 		JOIN produk p ON p.id = sm.id_produk
 		JOIN kategori k ON k.id = p.id_kategori
@@ -66,7 +67,7 @@ func (r *stokMasukRepository) FindAll(ctx context.Context) ([]model.StokMasukRes
 			&s.PolaPenggunaan, &s.SatuanIsi, &s.IsiPerKemasan,
 			&s.KodeBatch, &tgl, &exp,
 			&s.JumlahKemasan, &s.TotalIsiMasuk,
-			&s.Keterangan, &created,
+			&s.Keterangan, &created, &s.BatchDigunakan,
 		); err != nil {
 			return nil, err
 		}

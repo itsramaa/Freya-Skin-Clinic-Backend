@@ -68,6 +68,8 @@ func (h *StokKeluarHandler) Create(c *fiber.Ctx) error {
 			return response.Error(c, http.StatusBadRequest, "Stok tidak mencukupi untuk jumlah yang diminta.", nil)
 		case errors.Is(err, service.ErrTidakAdaBatch):
 			return response.Error(c, http.StatusBadRequest, "Tidak ada stok aktif untuk produk ini.", nil)
+		case errors.Is(err, service.ErrBatchExpired):
+			return response.Error(c, http.StatusBadRequest, "Produk ini tidak memiliki batch yang masih berlaku. Semua batch telah kadaluwarsa.", nil)
 		case errors.Is(err, service.ErrIsiDipakaiMelebihiSisa):
 			return response.Error(c, http.StatusBadRequest, "Jumlah isi yang dipakai melebihi sisa isi kemasan terbuka.", nil)
 		case errors.Is(err, service.ErrIsiPerKemasanTidakDiset):

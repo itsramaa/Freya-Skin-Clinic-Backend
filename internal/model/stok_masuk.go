@@ -56,4 +56,5 @@ type StokMasukResponse struct {
 	TotalIsiMasuk     float64  `json:"total_isi_masuk"`
 	Keterangan        string   `json:"keterangan"`
 	CreatedAt         string   `json:"created_at"`
+	BatchDigunakan    bool     `json:"batch_digunakan"`
 }

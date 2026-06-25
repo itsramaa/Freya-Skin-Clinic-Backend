@@ -12,6 +12,7 @@ import (
 var (
 	ErrStokKurang              = errors.New("Stok tidak mencukupi untuk jumlah yang diminta.")
 	ErrTidakAdaBatch           = errors.New("Tidak ada stok aktif untuk produk ini.")
+	ErrBatchExpired            = errors.New("Produk ini tidak memiliki batch yang masih berlaku. Semua batch telah kadaluwarsa.")
 	ErrIsiDipakaiMelebihiSisa  = errors.New("Jumlah isi yang dipakai melebihi sisa isi kemasan terbuka.")
 	ErrIsiPerKemasanTidakDiset = errors.New("Produk tidak memiliki konfigurasi isi per kemasan.")
 	ErrOpnameSedangBerlangsung = errors.New("Transaksi stok keluar tidak dapat dilakukan karena sesi stok opname sedang berlangsung.")

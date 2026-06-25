@@ -25,12 +25,12 @@ func NewBatchFEFORepository(db *pgxpool.Pool) BatchFEFORepository {
 	return &batchFEFORepository{db: db}
 }
 
-// FindBatchPrioritasFEFO — untuk Full Use: cari batch AKTIF dengan stok_kemasan > 0, expired ASC
+// FindBatchPrioritasFEFO — untuk Full Use: cari batch AKTIF dengan stok_kemasan > 0, belum expired, expired ASC
 func (r *batchFEFORepository) FindBatchPrioritasFEFO(ctx context.Context, idProduk string) (*model.BatchStok, error) {
 	query := `
 		SELECT id, id_produk, kode_batch, expired_date, stok_kemasan, total_isi_tersedia, status, created_at, updated_at
 		FROM batch_stok
-		WHERE id_produk = $1 AND status = 'AKTIF' AND stok_kemasan > 0
+		WHERE id_produk = $1 AND status = 'AKTIF' AND stok_kemasan > 0 AND expired_date >= CURRENT_DATE
 		ORDER BY expired_date ASC
 		LIMIT 1
 	`
@@ -49,15 +49,15 @@ func (r *batchFEFORepository) FindBatchPrioritasFEFO(ctx context.Context, idProd
 }
 
 // FindBatchPartialUseFEFO — untuk Partial Use:
-// Prioritas 1: batch AKTIF yang punya kemasan terbuka AKTIF (expired ASC)
-// Prioritas 2: batch AKTIF yang stok_kemasan > 0 (expired ASC)
+// Prioritas 1: batch AKTIF yang punya kemasan terbuka AKTIF (expired ASC, belum expired)
+// Prioritas 2: batch AKTIF yang stok_kemasan > 0 (expired ASC, belum expired)
 func (r *batchFEFORepository) FindBatchPartialUseFEFO(ctx context.Context, idProduk string) (*model.BatchStok, error) {
-	// Prioritas 1: ada kemasan terbuka aktif
+	// Prioritas 1: ada kemasan terbuka aktif, BUD belum kadaluwarsa, batch belum expired
 	query1 := `
 		SELECT b.id, b.id_produk, b.kode_batch, b.expired_date, b.stok_kemasan, b.total_isi_tersedia, b.status, b.created_at, b.updated_at
 		FROM batch_stok b
-		JOIN kemasan_terbuka kt ON kt.id_batch = b.id AND kt.status_bud = 'AKTIF' AND kt.isi_tersisa > 0
-		WHERE b.id_produk = $1 AND b.status = 'AKTIF'
+		JOIN kemasan_terbuka kt ON kt.id_batch = b.id AND kt.status_bud = 'AKTIF' AND kt.isi_tersisa > 0 AND kt.bud >= CURRENT_DATE
+		WHERE b.id_produk = $1 AND b.status = 'AKTIF' AND b.expired_date >= CURRENT_DATE
 		ORDER BY b.expired_date ASC
 		LIMIT 1
 	`
@@ -77,12 +77,12 @@ func (r *batchFEFORepository) FindBatchPartialUseFEFO(ctx context.Context, idPro
 	return r.FindBatchPrioritasFEFO(ctx, idProduk)
 }
 
-// FindAllBatchFEFO — untuk batch splitting Full Use: ambil semua batch AKTIF dengan stok_kemasan > 0, expired ASC
+// FindAllBatchFEFO — untuk batch splitting Full Use: ambil semua batch AKTIF dengan stok_kemasan > 0, belum expired, expired ASC
 func (r *batchFEFORepository) FindAllBatchFEFO(ctx context.Context, idProduk string) ([]model.BatchStok, error) {
 	query := `
 		SELECT id, id_produk, kode_batch, expired_date, stok_kemasan, total_isi_tersedia, status, created_at, updated_at
 		FROM batch_stok
-		WHERE id_produk = $1 AND status = 'AKTIF' AND stok_kemasan > 0
+		WHERE id_produk = $1 AND status = 'AKTIF' AND stok_kemasan > 0 AND expired_date >= CURRENT_DATE
 		ORDER BY expired_date ASC
 	`
 	rows, err := r.db.Query(ctx, query, idProduk)

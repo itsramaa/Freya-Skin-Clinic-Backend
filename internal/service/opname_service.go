@@ -82,7 +82,14 @@ func (s *opnameService) GetDetail(ctx context.Context, id string) (*model.StokOp
 		return nil, err
 	}
 
-	items, err := s.repo.GetItemsForOpname(ctx)
+	var items []model.OpnameItemResponse
+	if op.Status == "AKTIF" {
+		// Opname masih berjalan — tampilkan data live dari batch_stok/kemasan_terbuka
+		items, err = s.repo.GetItemsForOpname(ctx)
+	} else {
+		// Opname SELESAI/DIBATALKAN — baca dari histori audit detail_opname
+		items, err = s.repo.GetDetailItems(ctx, id)
+	}
 	if err != nil {
 		return nil, err
 	}

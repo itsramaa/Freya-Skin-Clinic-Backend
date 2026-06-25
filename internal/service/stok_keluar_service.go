@@ -246,24 +246,70 @@ func (s *stokKeluarService) Create(ctx context.Context, req model.StokKeluarRequ
 
 	if kt != nil && kt.IsiTersisa > 0 {
 		// Pakai kemasan terbuka yang masih ada isinya
-		if req.JumlahIsiDipakai > kt.IsiTersisa {
-			return nil, ErrIsiDipakaiMelebihiSisa
-		}
-		newSisa := kt.IsiTersisa - req.JumlahIsiDipakai
+		if req.JumlahIsiDipakai <= kt.IsiTersisa {
+			// Cukup dari kemasan terbuka saat ini
+			newSisa := kt.IsiTersisa - req.JumlahIsiDipakai
 
-		// Update isi tersisa kemasan terbuka
-		if err := s.kemasanRepo.UpdateIsiTersisa(ctx, kt.ID, newSisa); err != nil {
-			return nil, err
-		}
-		// Update total_isi_tersedia batch
-		if err := s.batchFEFORepo.ReduceStok(ctx, batch.ID, 0, req.JumlahIsiDipakai); err != nil {
-			return nil, err
-		}
-		idKemasan = &kt.ID
+			if err := s.kemasanRepo.UpdateIsiTersisa(ctx, kt.ID, newSisa); err != nil {
+				return nil, err
+			}
+			if err := s.batchFEFORepo.ReduceStok(ctx, batch.ID, 0, req.JumlahIsiDipakai); err != nil {
+				return nil, err
+			}
+			idKemasan = &kt.ID
 
-		// Jika kemasan terbuka habis, tandai KADALUWARSA (habis terpakai)
-		if newSisa == 0 {
+			// Kemasan habis → tandai KADALUWARSA
+			if newSisa == 0 {
+				_ = s.kemasanRepo.UpdateStatus(ctx, kt.ID, "KADALUWARSA")
+			}
+		} else {
+			// Partial splitting: habiskan kemasan terbuka + buka kemasan baru untuk kekurangan
+			sisaDariKemasan := kt.IsiTersisa
+			kekurangan := req.JumlahIsiDipakai - sisaDariKemasan
+
+			// Cek apakah ada kemasan berikutnya di batch yang sama
+			if batch.StokKemasan < 2 {
+				return nil, ErrStokKurang
+			}
+			if produk.IsiPerKemasan == nil {
+				return nil, ErrIsiPerKemasanTidakDiset
+			}
+			isiPerKemasan := *produk.IsiPerKemasan
+			if kekurangan > isiPerKemasan {
+				return nil, ErrIsiDipakaiMelebihiSisa
+			}
+
+			// Habiskan kemasan terbuka
+			if err := s.kemasanRepo.UpdateIsiTersisa(ctx, kt.ID, 0); err != nil {
+				return nil, err
+			}
 			_ = s.kemasanRepo.UpdateStatus(ctx, kt.ID, "KADALUWARSA")
+			if err := s.batchFEFORepo.ReduceStok(ctx, batch.ID, 0, sisaDariKemasan); err != nil {
+				return nil, err
+			}
+
+			// Buka kemasan baru untuk kekurangan
+			newKT := &model.KemasanTerbuka{
+				IDBatch:       batch.ID,
+				TanggalDibuka: tglPenggunaan,
+				BUD:           tglPenggunaan.AddDate(0, 0, 28),
+				IsiAwal:       isiPerKemasan,
+				IsiTersisa:    isiPerKemasan - kekurangan,
+				StatusBUD:     "AKTIF",
+			}
+			if err := s.kemasanRepo.Upsert(ctx, newKT); err != nil {
+				return nil, err
+			}
+			idKemasan = &newKT.ID
+
+			if err := s.batchFEFORepo.ReduceStok(ctx, batch.ID, 1, kekurangan); err != nil {
+				return nil, err
+			}
+
+			// Kemasan baru langsung habis
+			if newKT.IsiTersisa == 0 {
+				_ = s.kemasanRepo.UpdateStatus(ctx, newKT.ID, "KADALUWARSA")
+			}
 		}
 	} else {
 		// Tidak ada kemasan terbuka atau habis → buka kemasan baru

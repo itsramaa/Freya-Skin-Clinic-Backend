@@ -240,8 +240,15 @@ func (r *opnameRepository) SaveDetailAndAdjust(ctx context.Context, idOpname str
 				}
 				_, err = tx.Exec(ctx, `UPDATE kemasan_terbuka SET isi_tersisa = $1, updated_at = NOW() WHERE id = $2`, sisaIsi, *d.IDKemasanTerbuka)
 			} else {
-				// Full Use: update stok_kemasan dan total_isi_tersedia sekaligus
-				_, err = tx.Exec(ctx, `UPDATE batch_stok SET stok_kemasan = $1, total_isi_tersedia = $1, updated_at = NOW() WHERE id = $2`, int(d.StokFisik), d.IDBatch)
+				// Full Use: update stok_kemasan dan total_isi_tersedia sekaligus,
+				// auto-set status HABIS jika stok mencapai 0
+				_, err = tx.Exec(ctx, `
+					UPDATE batch_stok SET
+						stok_kemasan = $1,
+						total_isi_tersedia = $1,
+						status = CASE WHEN $1 = 0 THEN 'HABIS' ELSE status END,
+						updated_at = NOW()
+					WHERE id = $2`, int(d.StokFisik), d.IDBatch)
 			}
 			if err != nil {
 				return err

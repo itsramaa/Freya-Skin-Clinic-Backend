@@ -24,7 +24,10 @@ func NewMonitoringRepository(db *pgxpool.Pool) MonitoringRepository {
 }
 
 func (r *monitoringRepository) FindAllForMonitoring(ctx context.Context, filter model.MonitoringFilter) ([]model.MonitoringProdukItem, error) {
-	// 1. Ambil semua batch dengan info produk & kategori
+	// Ambil batch yang masih relevan untuk monitoring:
+	// - status AKTIF dengan stok > 0, ATAU
+	// - status AKTIF dengan kemasan terbuka masih ada isinya (Partial Use)
+	// Tidak bergantung pada worker untuk update status — indikator dihitung real-time dari expired_date
 	query := `
 		SELECT b.id, b.id_produk, b.kode_batch, b.expired_date,
 		       b.stok_kemasan, b.total_isi_tersedia, b.status,
@@ -34,6 +37,13 @@ func (r *monitoringRepository) FindAllForMonitoring(ctx context.Context, filter 
 		JOIN produk p ON p.id = b.id_produk
 		JOIN kategori k ON k.id = p.id_kategori
 		WHERE b.status = 'AKTIF'
+		  AND (
+		    b.stok_kemasan > 0
+		    OR EXISTS (
+		      SELECT 1 FROM kemasan_terbuka kt
+		      WHERE kt.id_batch = b.id AND kt.status_bud = 'AKTIF' AND kt.isi_tersisa > 0
+		    )
+		  )
 	`
 	args := []interface{}{}
 	idx := 1

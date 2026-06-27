@@ -115,18 +115,6 @@ func (s *opnameService) SelesaikanOpname(ctx context.Context, id string, req mod
 		return errors.New("Sesi opname tidak dalam status AKTIF")
 	}
 
-	// Validasi keterangan wajib untuk item dengan selisih
-	// Frontend mengirim StokFisik berdasarkan input user — validasi di sini via flag HasSelisih
-	// Karena stok_sistem ada di DB, validasi dilakukan di repository dengan return error
-	// Namun untuk kasus keterangan kosong secara eksplisit, cek di sini dulu
-	for _, d := range req.Details {
-		if d.Keterangan == "" && d.StokFisik == 0 {
-			// stok fisik 0 kemungkinan besar ada selisih, tapi kita tidak tahu stok sistem
-			// biarkan repo yang validasi
-			_ = d
-		}
-	}
-
 	return s.repo.SaveDetailAndAdjust(ctx, id, req.Details)
 }
 

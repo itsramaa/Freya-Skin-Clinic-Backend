@@ -233,8 +233,8 @@ func (s *stokKeluarService) Create(ctx context.Context, req model.StokKeluarRequ
 			return nil, err
 		}
 		kt = nil
-		// Cari ulang batch yang punya stok kemasan
-		batch, err = s.batchFEFORepo.FindBatchPrioritasFEFO(ctx, req.IDProduk)
+		// Cari ulang batch dengan prioritas Partial Use FEFO (batch dengan kemasan terbuka aktif dulu)
+		batch, err = s.batchFEFORepo.FindBatchPartialUseFEFO(ctx, req.IDProduk)
 		if err != nil {
 			return nil, err
 		}
@@ -269,7 +269,8 @@ func (s *stokKeluarService) Create(ctx context.Context, req model.StokKeluarRequ
 			kekurangan := req.JumlahIsiDipakai - sisaDariKemasan
 
 			// Cek apakah ada kemasan berikutnya di batch yang sama
-			if batch.StokKemasan < 2 {
+			// stok_kemasan sudah tidak termasuk kemasan terbuka (sudah dikurangi saat kemasan dibuka)
+			if batch.StokKemasan < 1 {
 				return nil, ErrStokKurang
 			}
 			if produk.IsiPerKemasan == nil {

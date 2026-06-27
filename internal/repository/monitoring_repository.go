@@ -128,16 +128,19 @@ func (r *monitoringRepository) FindAllForMonitoring(ctx context.Context, filter 
 	}
 
 	// 2. Fetch kemasan terbuka untuk setiap batch (jika PARTIAL_USE)
+	today := time.Now().Truncate(24 * time.Hour)
 	for _, pID := range produkOrder {
 		p := produkMap[pID]
 		if p.PolaPenggunaan != "PARTIAL_USE" {
 			continue
 		}
 		for i, b := range p.Batches {
+			// Fetch kemasan terbuka tanpa filter status_bud — hitung real-time dari BUD date
 			ktQuery := `
 				SELECT id, tanggal_dibuka, bud, isi_awal, isi_tersisa, status_bud
 				FROM kemasan_terbuka
-				WHERE id_batch = $1 AND status_bud = 'AKTIF'
+				WHERE id_batch = $1
+				ORDER BY updated_at DESC
 				LIMIT 1
 			`
 			var ktID, ktStatus string
@@ -145,25 +148,58 @@ func (r *monitoringRepository) FindAllForMonitoring(ctx context.Context, filter 
 			var ktIsiAwal, ktIsi float64
 			err := r.db.QueryRow(ctx, ktQuery, b.IDBatch).Scan(&ktID, &ktTanggalDibuka, &ktBUD, &ktIsiAwal, &ktIsi, &ktStatus)
 			if err == nil {
-				// Filter status BUD jika ada
-				if filter.StatusBUD != "" && filter.StatusBUD != ktStatus {
+				// Hitung status BUD real-time berdasarkan tanggal
+				effectiveStatusBUD := ktStatus
+				if ktBUD.Before(today) {
+					effectiveStatusBUD = "KADALUWARSA"
+				}
+
+				// Filter status BUD jika ada — pakai effective status (real-time)
+				if filter.StatusBUD != "" && filter.StatusBUD != effectiveStatusBUD {
 					continue
 				}
+
 				p.Batches[i].KemasanTerbuka = &model.MonitoringKemasanTerbuka{
 					ID:            ktID,
 					TanggalDibuka: ktTanggalDibuka.Format("2006-01-02"),
 					BUD:           ktBUD.Format("2006-01-02"),
 					IsiAwal:       ktIsiAwal,
 					IsiTersisa:    ktIsi,
-					StatusBUD:     ktStatus,
+					StatusBUD:     effectiveStatusBUD,
 				}
 			}
 		}
 	}
 
+	// 3. Post-filter: hapus batch PARTIAL_USE yang tidak punya kemasan terbuka setelah filter StatusBUD
+	for _, pID := range produkOrder {
+		p := produkMap[pID]
+		if p.PolaPenggunaan != "PARTIAL_USE" || filter.StatusBUD == "" {
+			continue
+		}
+		filtered := p.Batches[:0]
+		for _, b := range p.Batches {
+			if b.KemasanTerbuka != nil {
+				filtered = append(filtered, b)
+			}
+		}
+		produkMap[pID].Batches = filtered
+	}
+
 	result := make([]model.MonitoringProdukItem, 0, len(produkOrder))
 	for _, pID := range produkOrder {
 		item := *produkMap[pID]
+
+		// Jika filter StatusBUD aktif, FULL_USE tidak punya kemasan terbuka — skip
+		if filter.StatusBUD != "" && item.PolaPenggunaan != "PARTIAL_USE" {
+			continue
+		}
+
+		// Jika filter StatusBUD aktif dan semua batch sudah tidak punya kemasan terbuka — skip
+		if filter.StatusBUD != "" && len(item.Batches) == 0 {
+			continue
+		}
+
 		// Post-filter IndikatorExpired: filter batch yang tidak sesuai indikator
 		if filter.IndikatorExpired != "" {
 			filtered := item.Batches[:0]

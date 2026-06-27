@@ -32,6 +32,9 @@ func (h *OpnameHandler) MulaiOpname(c *fiber.Ctx) error {
 	userID, _ := c.Locals("user_id").(string)
 	data, err := h.svc.MulaiOpname(c.Context(), userID)
 	if err != nil {
+		if errors.Is(err, service.ErrOpnameAktifSudahAda) {
+			return response.Error(c, http.StatusConflict, "Sudah ada sesi opname yang aktif. Selesaikan atau batalkan terlebih dahulu.", nil)
+		}
 		return response.Error(c, http.StatusInternalServerError, "Gagal memulai sesi opname. Silakan coba lagi.", nil)
 	}
 	return response.Success(c, http.StatusCreated, "Sesi opname berhasil dimulai.", data)

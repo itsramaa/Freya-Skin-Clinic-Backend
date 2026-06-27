@@ -13,14 +13,17 @@ type StokOpname struct {
 }
 
 type DetailOpname struct {
-	ID               string  `db:"id"`
-	IDOpname         string  `db:"id_opname"`
-	IDBatch          string  `db:"id_batch"`
-	IDKemasanTerbuka *string `db:"id_kemasan_terbuka"`
-	StokSistem       float64 `db:"stok_sistem"`
-	StokFisik        float64 `db:"stok_fisik"`
-	Selisih          float64 `db:"selisih"`
-	Keterangan       string  `db:"keterangan"`
+	ID               string   `db:"id"`
+	IDOpname         string   `db:"id_opname"`
+	IDBatch          string   `db:"id_batch"`
+	IDKemasanTerbuka *string  `db:"id_kemasan_terbuka"`
+	StokSistem       float64  `db:"stok_sistem"`
+	StokFisik        float64  `db:"stok_fisik"`
+	Selisih          float64  `db:"selisih"`
+	SisaIsiSistem    *float64 `db:"sisa_isi_sistem"`
+	SisaIsiFisik     *float64 `db:"sisa_isi_fisik"`
+	SelisihSisaIsi   *float64 `db:"selisih_sisa_isi"`
+	Keterangan       string   `db:"keterangan"`
 }
 
 type DetailOpnameInput struct {
@@ -28,7 +31,7 @@ type DetailOpnameInput struct {
 	IDKemasanTerbuka *string  `json:"id_kemasan_terbuka"`
 	StokFisik        float64  `json:"stok_fisik"`
 	SisaIsiTerbuka   *float64 `json:"sisa_isi_terbuka"`
-	Keterangan       string   `json:"keterangan"`
+	Keterangan       *string  `json:"keterangan"`
 }
 
 type SelesaikanOpnameRequest struct {
@@ -36,19 +39,22 @@ type SelesaikanOpnameRequest struct {
 }
 
 type OpnameItemResponse struct {
-	IDBatch            string   `json:"id_batch"`
-	KodeBatch          string   `json:"kode_batch"`
-	NamaProduk         string   `json:"nama_produk"`
-	ExpiredDate        string   `json:"expired_date"`
-	PolaPenggunaan     string   `json:"pola_penggunaan"`
-	SatuanIsi          string   `json:"satuan_isi"`
-	IDKemasanTerbuka   *string  `json:"id_kemasan_terbuka"`
-	IsiTersisa         *float64 `json:"isi_tersisa"`
-	StokSistem         float64  `json:"stok_sistem"`
-	StokKemasanSistem  *float64 `json:"stok_kemasan_sistem"`
-	StokFisik          *float64 `json:"stok_fisik"`
-	Selisih            *float64 `json:"selisih"`
-	Keterangan         string   `json:"keterangan"`
+	IDBatch           string   `json:"id_batch"`
+	KodeBatch         string   `json:"kode_batch"`
+	NamaProduk        string   `json:"nama_produk"`
+	ExpiredDate       string   `json:"expired_date"`
+	PolaPenggunaan    string   `json:"pola_penggunaan"`
+	SatuanIsi         string   `json:"satuan_isi"`
+	IDKemasanTerbuka  *string  `json:"id_kemasan_terbuka"`
+	IsiTersisa        *float64 `json:"isi_tersisa"`
+	StokSistem        float64  `json:"stok_sistem"`
+	StokKemasanSistem *float64 `json:"stok_kemasan_sistem"`
+	StokFisik         *float64 `json:"stok_fisik"`
+	Selisih           *float64 `json:"selisih"`
+	SisaIsiSistem     *float64 `json:"sisa_isi_sistem"`
+	SisaIsiFisik      *float64 `json:"sisa_isi_fisik"`
+	SelisihSisaIsi    *float64 `json:"selisih_sisa_isi"`
+	Keterangan        string   `json:"keterangan"`
 }
 
 type StokOpnameResponse struct {

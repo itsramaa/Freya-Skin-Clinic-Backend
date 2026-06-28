@@ -169,6 +169,22 @@ migrate-version-prod:
 migrate-seed-prod: migrate-up-prod
 	@echo "Migrations applied. Seed user sudah termasuk di migration 000002."
 
+# ── Database Reset & Seed (Production) ────────────────────────────────────────
+
+## reset-seed: Cleansing data dan seed dummy data (LOCAL - gunakan .env)
+reset-seed:
+	@echo "⚠️  WARNING: Ini akan menghapus SEMUA data transaksi dan reset auth!"
+	@echo "Database: LOCAL (.env)"
+	@powershell -Command "$$confirm = Read-Host 'Ketik YES untuk melanjutkan'; if($$confirm -ne 'YES'){Write-Host 'Dibatalkan.'; exit 1}"
+	@psql $(shell grep DATABASE_URL .env | cut -d '=' -f2-) -f scripts/reset_and_seed.sql
+
+## reset-seed-prod: Cleansing data dan seed dummy data (PRODUCTION - gunakan .env.production)
+reset-seed-prod:
+	@echo "⚠️  WARNING: Ini akan menghapus SEMUA data transaksi dan reset auth!"
+	@echo "Database: PRODUCTION (.env.production)"
+	@powershell -Command "$$confirm = Read-Host 'Ketik YES untuk melanjutkan'; if($$confirm -ne 'YES'){Write-Host 'Dibatalkan.'; exit 1}"
+	@psql $(shell grep DATABASE_URL .env.production | cut -d '=' -f2-) -f scripts/reset_and_seed.sql
+
 # ── API Documentation ──────────────────────────────────────────────────────────
 
 ## docs: Open Scalar API docs in browser (server must be running)

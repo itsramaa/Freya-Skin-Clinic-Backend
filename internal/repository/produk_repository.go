@@ -152,6 +152,11 @@ func (r *produkRepository) CountStokAktif(ctx context.Context, id string) (int, 
 
 func (r *produkRepository) CountTransaksi(ctx context.Context, id string) (int, error) {
 	var count int
-	err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM stok_masuk WHERE id_produk = $1`, id).Scan(&count)
+	err := r.db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM (
+			SELECT id FROM stok_masuk WHERE id_produk = $1
+			UNION ALL
+			SELECT id FROM stok_keluar WHERE id_produk = $1
+		) t`, id).Scan(&count)
 	return count, err
 }

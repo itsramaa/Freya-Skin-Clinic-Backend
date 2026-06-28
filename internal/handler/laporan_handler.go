@@ -44,9 +44,11 @@ func (h *LaporanHandler) GetStokKeluar(c *fiber.Ctx) error {
 }
 
 func (h *LaporanHandler) GetSisaStok(c *fiber.Ctx) error {
-	data, err := h.svc.GetSisaStok(c.Context(), c.Query("kategori_id"), c.Query("produk_id"))
+	dari := c.Query("dari")
+	sampai := c.Query("sampai")
+	data, err := h.svc.GetSisaStok(c.Context(), c.Query("kategori_id"), c.Query("produk_id"), dari, sampai)
 	if err != nil {
-		return response.Error(c, http.StatusInternalServerError, "Gagal mengambil laporan sisa stok. Silakan coba lagi.", nil)
+		return response.Error(c, http.StatusBadRequest, err.Error(), nil)
 	}
 	return response.Success(c, http.StatusOK, "Laporan sisa stok berhasil diambil", data)
 }

@@ -12,7 +12,7 @@ import (
 type LaporanService interface {
 	GetStokMasuk(ctx context.Context, dari, sampai, kategoriID, produkID string) ([]model.LaporanStokMasukItem, error)
 	GetStokKeluar(ctx context.Context, dari, sampai, kategoriID, produkID string) ([]model.LaporanStokKeluarItem, error)
-	GetSisaStok(ctx context.Context, kategoriID, produkID string) ([]model.LaporanSisaStokItem, error)
+	GetSisaStok(ctx context.Context, kategoriID, produkID, dari, sampai string) ([]model.LaporanSisaStokItem, error)
 }
 
 type laporanService struct {
@@ -58,6 +58,22 @@ func (s *laporanService) GetStokKeluar(ctx context.Context, dari, sampai, katego
 	})
 }
 
-func (s *laporanService) GetSisaStok(ctx context.Context, kategoriID, produkID string) ([]model.LaporanSisaStokItem, error) {
-	return s.repo.GetSisaStok(ctx, model.LaporanFilter{KategoriID: kategoriID, ProdukID: produkID})
+func (s *laporanService) GetSisaStok(ctx context.Context, kategoriID, produkID, dari, sampai string) ([]model.LaporanSisaStokItem, error) {
+	var dariT, sampaiT time.Time
+	var err error
+	if dari != "" {
+		dariT, err = parseDate(dari)
+		if err != nil {
+			return nil, errors.New("Format tanggal 'dari' tidak valid")
+		}
+	}
+	if sampai != "" {
+		sampaiT, err = parseDate(sampai)
+		if err != nil {
+			return nil, errors.New("Format tanggal 'sampai' tidak valid")
+		}
+	}
+	return s.repo.GetSisaStok(ctx, model.LaporanFilter{
+		Dari: dariT, Sampai: sampaiT, KategoriID: kategoriID, ProdukID: produkID,
+	})
 }

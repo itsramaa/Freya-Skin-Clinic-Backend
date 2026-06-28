@@ -144,6 +144,17 @@ func (r *laporanRepository) GetSisaStok(ctx context.Context, filter model.Lapora
 	if filter.ProdukID != "" {
 		query += ` AND p.id = $` + strconv.Itoa(idx)
 		args = append(args, filter.ProdukID)
+		idx++
+	}
+	if !filter.Dari.IsZero() {
+		query += ` AND (b.expired_date >= $` + strconv.Itoa(idx) + ` OR b.id IS NULL)`
+		args = append(args, filter.Dari)
+		idx++
+	}
+	if !filter.Sampai.IsZero() {
+		query += ` AND (b.expired_date <= $` + strconv.Itoa(idx) + ` OR b.id IS NULL)`
+		args = append(args, filter.Sampai)
+		idx++
 	}
 	query += ` GROUP BY p.id, k.nama_kategori ORDER BY p.kode_produk`
 
